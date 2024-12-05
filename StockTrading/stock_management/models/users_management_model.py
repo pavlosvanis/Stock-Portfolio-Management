@@ -1,158 +1,147 @@
-import os
-import sqlite3
+import hashlib
 import logging
-from dataclasses import dataclass
-from stock_management.utils.sql_utils import get_db_connection
-from flask_bcrypt import Bcrypt
-from stock_management.utils.logger import configure_logger
+import os
 
-bcrypt = Bcrypt()
+from sqlalchemy.exc import IntegrityError
+
+from meal_max.db import db
+from meal_max.utils.logger import configure_logger
+
 
 logger = logging.getLogger(__name__)
 configure_logger(logger)
 
-@dataclass
-class User:
-    username: str
-    password_hash: str
-    salt: str
 
-    def __post_init__(self):
-        if not self.username or len(self.username) < 3:
-            raise ValueError("Username must be at least 3 characters long")
+class Users(db.Model):
+    __tablename__ = 'users'
 
-def create_user(username: str, password: str) -> None:
-    """
-    Creates a new user in the users table.
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    salt = db.Column(db.String(32), nullable=False)  # 16-byte salt in hex
+    password = db.Column(db.String(64), nullable=False)  # SHA-256 hash in hex
 
-    Args:
-        username (str): The desired username.
-        password (str): The user's password.
+    @classmethod
+    def _generate_hashed_password(cls, password: str) -> tuple[str, str]:
+        """
+        Generates a salted, hashed password.
 
-    Raises:
-        ValueError: If the username already exists or validation fails (e.g. password length).
-        sqlite3.Error: If any database error occurs.
-    """
-    if len(password) < 6:
-        raise ValueError("Password must be at least 6 characters long")
+        Args:
+            password (str): The password to hash.
 
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
+        Returns:
+            tuple: A tuple containing the salt and hashed password.
+        """
+        salt = os.urandom(16).hex()
+        hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
+        return salt, hashed_password
 
-            # Check if the username already exists before generate the salt
-            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-            if cursor.fetchone():
-                logger.error("User with username '%s' already exists.", username)
-                raise ValueError(f"Username '{username}' already exists")
+    @classmethod
+    def create_user(cls, username: str, password: str) -> None:
+        """
+        Create a new user with a salted, hashed password.
 
-            salt = bcrypt.generate_password_hash(username).decode('utf-8')[:32]
-            password_hash = bcrypt.generate_password_hash(password + salt).decode('utf-8')
+        Args:
+            username (str): The username of the user.
+            password (str): The password to hash and store.
 
-            # Insert the new user
-            cursor.execute(
-                "INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)",
-                (username, password_hash, salt),
-            )
-            conn.commit()
+        Raises:
+            ValueError: If a user with the username already exists.
+        """
+        salt, hashed_password = cls._generate_hashed_password(password)
+        new_user = cls(username=username, salt=salt, password=hashed_password)
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            logger.info("User successfully added to the database: %s", username)
+        except IntegrityError:
+            db.session.rollback()
+            logger.error("Duplicate username: %s", username)
+            raise ValueError(f"User with username '{username}' already exists")
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Database error: %s", str(e))
+            raise
 
-            logger.info("User: %s created succesfully", username)
+    @classmethod
+    def check_password(cls, username: str, password: str) -> bool:
+        """
+        Check if a given password matches the stored password for a user.
 
-    except sqlite3.Error as e:
-        logger.error("Database error while creating the user: %s", str(e))
-        raise sqlite3.Error(f"Database error: {e}")
+        Args:
+            username (str): The username of the user.
+            password (str): The password to check.
 
-def get_user_by_username(username: str) -> User:
-    """
-    Retrieves a user by their username.
+        Returns:
+            bool: True if the password is correct, False otherwise.
 
-    Args:
-        username (str): The username to look up.
+        Raises:
+            ValueError: If the user does not exist.
+        """
+        user = cls.query.filter_by(username=username).first()
+        if not user:
+            logger.info("User %s not found", username)
+            raise ValueError(f"User {username} not found")
+        hashed_password = hashlib.sha256((password + user.salt).encode()).hexdigest()
+        return hashed_password == user.password
 
-    Returns:
-        User: The User object if found.
+    @classmethod
+    def delete_user(cls, username: str) -> None:
+        """
+        Delete a user from the database.
 
-    Raises:
-        ValueError: If the user is not found.
-        sqlite3.Error: If a database error occurs.
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            logger.info("Attempting to retrieve user with username %s", username)
-            cursor.execute(
-                "SELECT id, username, password_hash, salt FROM users WHERE username = ?",
-                (username,),
-            )
-            row = cursor.fetchone()
-            if not row:
-                logger.info("User with username %s not found", username)
-                raise ValueError(f"User '{username}' not found")
-            
-            logger.info("User with username %s not found", username)
-            return User(id=row[0], username=row[1], password_hash=row[2], salt=row[3])
+        Args:
+            username (str): The username of the user to delete.
 
-    except sqlite3.Error as e:
-        logger.error("Database error while retrieving the user by username %s: %s", username, str(e))
-        raise sqlite3.Error(f"Database error: {e}")
+        Raises:
+            ValueError: If the user does not exist.
+        """
+        user = cls.query.filter_by(username=username).first()
+        if not user:
+            logger.info("User %s not found", username)
+            raise ValueError(f"User {username} not found")
+        db.session.delete(user)
+        db.session.commit()
+        logger.info("User %s deleted successfully", username)
 
-def update_user_password(username: str, new_password: str) -> None:
-    """
-    Updates a user's password.
+    @classmethod
+    def get_id_by_username(cls, username: str) -> int:
+        """
+        Retrieve the ID of a user by username.
 
-    Args:
-        username (str): The username of the user.
-        new_password (str): The new password.
+        Args:
+            username (str): The username of the user.
 
-    Raises:
-        ValueError: If the user is not found or validation fails.
-        sqlite3.Error: If any database error occurs.
-    """
-    if len(new_password) < 6:
-        logger.error("The new password entered is less than 6 characters long")
-        raise ValueError("New password must be at least 6 characters long")
+        Returns:
+            int: The ID of the user.
 
-    try:
-        user = get_user_by_username(username)
+        Raises:
+            ValueError: If the user does not exist.
+        """
+        user = cls.query.filter_by(username=username).first()
+        if not user:
+            logger.info("User %s not found", username)
+            raise ValueError(f"User {username} not found")
+        return user.id
 
-        # Generate a new salt and hash the new password
-        salt = bcrypt.generate_password_hash(username).decode('utf-8')[:32]
-        password_hash = bcrypt.generate_password_hash(new_password + salt).decode('utf-8')
+    @classmethod
+    def update_password(cls, username: str, new_password: str) -> None:
+        """
+        Update the password for a user.
 
-        # Update the user's password in the database
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET password_hash = ?, salt = ? WHERE username = ?",
-                (password_hash, salt, username),
-            )
-            conn.commit()
-        
-        logger.info("Password updated for user: %s", username)
+        Args:
+            username (str): The username of the user.
+            new_password (str): The new password to set.
 
-    except sqlite3.Error as e:
-        logger.error("Database error while creating the user: %s", str(e))
-        raise sqlite3.Error(f"Database error: {e}")
+        Raises:
+            ValueError: If the user does not exist.
+        """
+        user = cls.query.filter_by(username=username).first()
+        if not user:
+            logger.info("User %s not found", username)
+            raise ValueError(f"User {username} not found")
 
-def verify_user_credentials(username: str, password: str) -> bool:
-    """
-    Verifies a user's credentials.
-
-    Args:
-        username (str): The username.
-        password (str): The plaintext password to verify.
-
-    Returns:
-        bool: True if credentials are valid, False otherwise.
-
-    Raises:
-        ValueError: If the user is not found.
-        sqlite3.Error: If any database error occurs.
-    """
-    try:
-        user = get_user_by_username(username)
-        logger.info("Password checked successfully. Results will be determined...")
-        return bcrypt.check_password_hash(user.password_hash, password + user.salt)
-    except sqlite3.Error as e:
-        logger.error("Database error while creating the user: %s", str(e))
-        raise sqlite3.Error(f"Database error: {e}")
+        salt, hashed_password = cls._generate_hashed_password(new_password)
+        user.salt = salt
+        user.password = hashed_password
+        db.session.commit()
+        logger.info("Password updated successfully for user: %s", username)
