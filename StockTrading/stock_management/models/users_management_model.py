@@ -96,17 +96,16 @@ def get_user_by_username(username: str) -> User:
         logger.error("Database error while retrieving the user by username %s: %s", username, str(e))
         raise sqlite3.Error(f"Database error: {e}")
 
-def update_user_password(username: str, old_password: str, new_password: str) -> None:
+def update_user_password(username: str, new_password: str) -> None:
     """
     Updates a user's password.
 
     Args:
         username (str): The username of the user.
-        old_password(str): The old password for verification purpose.
         new_password (str): The new password.
 
     Raises:
-        ValueError: If the user is not found or validation fails, or the old password does not match.
+        ValueError: If the user is not found or validation fails.
         sqlite3.Error: If any database error occurs.
     """
     if len(new_password) < 6:
@@ -115,11 +114,6 @@ def update_user_password(username: str, old_password: str, new_password: str) ->
 
     try:
         user = get_user_by_username(username)
-
-        # Verify the old password
-        if not bcrypt.check_password_hash(user.password_hash, old_password + user.salt):
-            logger.error("The password you entered: %s does not match your old password", old_password)
-            raise ValueError("Old password is incorrect")
 
         # Generate a new salt and hash the new password
         salt = bcrypt.generate_password_hash(username).decode('utf-8')[:32]
