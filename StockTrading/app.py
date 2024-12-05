@@ -1,39 +1,150 @@
 from dotenv import load_dotenv
 from flask import Flask, jsonify, make_response, Response, request
 
-from music_collection.models import song_model
-from music_collection.models.playlist_model import PlaylistModel
-from music_collection.utils.sql_utils import check_database_connection, check_table_exists
+from StockTrading.stock_management.models import stock_model
+from stock_management.models.user_profile_model import UserProfile
+from stock_management.models.users_management_model import create_user, verify_user_credentials, update_user_password
 
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
-
-
+from stock_management.utils.sql_utils import check_database_connection, check_table_exists
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-playlist_model = PlaylistModel()
+user_profile_model = UserProfile()
 
 ##########################################################
 #
-# User Authentication
+# Users Management (Create, Login, Update)
 #
 ##########################################################
 
 @app.route('/api/create-account', methods=['POST'])
 def create_account():
-    pass
+    """
+    Route to create a new account.
+
+    Expected JSON input:
+        - username (str): The user's desired username for the account.
+        - password (str): The user's desired password for the account.
+
+    Returns:
+        JSON response indicating the success or failure of account creation.
+
+    Raises:
+        400 error if input validation fails or username already exists.
+        500 error if there is an unexpected issue adding the account.
+    """
+    app.logger.info('Attempting to create a new account')
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+
+        if not username or not password:
+            app.logger.warning('Invalid input: Username or password missing')
+            return make_response(jsonify({'error': 'Username and password are required'}), 400)
+
+        app.logger.info('Creating account for username: %s', username)
+        create_user(username, password)
+        app.logger.info('Account created successfully for username: %s', username)
+        return make_response(jsonify({'message': f'Account for {username} created successfully'}), 201)
+    except ValueError as e:
+        app.logger.warning('Failed to create account: %s', str(e))
+        return make_response(jsonify({'error': str(e)}), 400)
+    except Exception as e:
+        app.logger.error('Unexpected error during account creation: %s', str(e))
+        return make_response(jsonify({'error': 'An unexpected error occurred'}), 500)
+
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    pass
+    """
+    Route to login a user.
+
+    Expected JSON input:
+        - username (str): The username of the user.
+        - password (str): The password of the user's account.
+
+    Returns:
+        JSON response indicating success or failure of login.
+
+    Raises:
+        400 error if input validation fails.
+        500 error if there is an unexpected issue during login.
+        600 error if credentials are invalid.
+    """
+    app.logger.info('Attempting to login')
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+
+        if not username or not password:
+            app.logger.warning('Invalid input: Username or password missing')
+            return make_response(jsonify({'error': 'Username and password are required'}), 400)
+
+        app.logger.info('Verifying credentials for username: %s', username)
+        if verify_user_credentials(username, password):
+            app.logger.info('Login successful for username: %s', username)
+            return make_response(jsonify({'message': 'Login successful'}), 200)
+        else:
+            app.logger.warning('Invalid username or password')
+            return make_response(jsonify({'error': 'Invalid username or password'}), 600)
+    except ValueError as e:
+        app.logger.warning('Login failed for username %s: %s', username, str(e))
+        return make_response(jsonify({'error': str(e)}), 401)
+    except Exception as e:
+        app.logger.error('Unexpected error during login: %s', str(e))
+        return make_response(jsonify({'error': 'An unexpected error occurred'}), 500)
+
 
 @app.route('/api/update-password', methods=['POST'])
 def update_password():
-    pass
+    """
+    Route to update a user's password.
+
+    Expected JSON input:
+        - username (str): The username of the user.
+        - old_password (str): The user's current password for verification.
+        - new_password (str): The user's new desired password.
+
+    Returns:
+        JSON response indicating success or failure of the password update.
+
+    Raises:
+        400 error if input validation fails.
+        500 error if there is an unexpected issue during the update.
+        600 error if the old password is incorrect.
+    """
+    app.logger.info('Attempting to update user password')
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        old_password = data.get('old_password')
+        new_password = data.get('new_password')
+
+        if not username or not old_password or not new_password:
+            app.logger.warning('Invalid input: Missing username, old_password, or new_password')
+            return make_response(jsonify({'error': 'Username, old_password, and new_password are required'}), 400)
+        
+         # Verify the old password using verify_user_credentials
+        app.logger.info('Verifying old password for username: %s', username)
+        if not verify_user_credentials(username, old_password):
+            app.logger.warning('Old password verification failed for username: %s', username)
+            return make_response(jsonify({'error': 'Old password is incorrect'}), 600)
+
+        app.logger.info('Updating password for username: %s', username)
+        update_user_password(username, old_password, new_password)
+        app.logger.info('Password updated successfully for username: %s', username)
+        return make_response(jsonify({'message': 'Password updated successfully'}), 200)
+    except ValueError as e:
+        app.logger.warning('Password update failed for username %s: %s', username, str(e))
+        return make_response(jsonify({'error': str(e)}), 600)
+    except Exception as e:
+        app.logger.error('Unexpected error during password update: %s', str(e))
+        return make_response(jsonify({'error': 'An unexpected error occurred'}), 500)
 
 
 ####################################################
@@ -78,7 +189,7 @@ def db_check() -> Response:
 
 ##########################################################
 #
-# Song Management
+# Song Management -> Need to be Changed to Our Own <-
 #
 ##########################################################
 
@@ -256,7 +367,7 @@ def get_random_song() -> Response:
 
 ############################################################
 #
-# Playlist Management
+# Playlist Management -> Need to be Changed to Our Own <-
 #
 ############################################################
 
@@ -380,7 +491,7 @@ def clear_playlist() -> Response:
 
 ############################################################
 #
-# Play Playlist
+# Play Playlist -> Need to be Changed to Our Own <-
 #
 ############################################################
 
@@ -587,7 +698,7 @@ def go_to_track_number(track_number: int) -> Response:
 
 ############################################################
 #
-# Arrange Playlist
+# Arrange Playlist -> Need to be Changed to Our Own <-
 #
 ############################################################
 
@@ -724,7 +835,7 @@ def swap_songs_in_playlist() -> Response:
 
 ############################################################
 #
-# Leaderboard / Stats
+# Leaderboard / Stats -> Need to be Changed to Our Own <-
 #
 ############################################################
 
