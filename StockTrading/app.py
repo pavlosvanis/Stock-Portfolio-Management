@@ -5,6 +5,10 @@ from music_collection.models import song_model
 from music_collection.models.playlist_model import PlaylistModel
 from music_collection.utils.sql_utils import check_database_connection, check_table_exists
 
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,6 +16,24 @@ load_dotenv()
 app = Flask(__name__)
 
 playlist_model = PlaylistModel()
+
+##########################################################
+#
+# User Authentication
+#
+##########################################################
+
+@app.route('/api/create-account', methods=['POST'])
+def create_account():
+    pass
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    pass
+
+@app.route('/api/update-password', methods=['POST'])
+def update_password():
+    pass
 
 
 ####################################################
