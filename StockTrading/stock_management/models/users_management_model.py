@@ -157,7 +157,7 @@ def verify_user_credentials(username: str, password: str) -> bool:
     """
     try:
         user = get_user_by_username(username)
-        logger.info("Password checked successfully. Result will be determined...")
+        logger.info("Password checked successfully. Results will be determined...")
         return bcrypt.check_password_hash(user.password_hash, password + user.salt)
     except sqlite3.Error as e:
         logger.error("Database error while creating the user: %s", str(e))
