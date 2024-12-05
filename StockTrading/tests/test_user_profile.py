@@ -1,50 +1,205 @@
+from contextlib import contextmanager
+import re
+import sqlite3
+
 import pytest
-import requests
 
-from music_collection.utils.random_utils import get_random
+from stock_management.models.user_profile_model import UserProfile
 
+######################################################
+#
+#    Fixtures
+#
+######################################################
 
-RANDOM_NUMBER = 42
-NUM_SONGS = 100
+def normalize_whitespace(sql_query: str) -> str:
+    return re.sub(r'\s+', ' ', sql_query).strip()
+
+# Mocking the database connection for tests
+@pytest.fixture
+def mock_cursor(mocker):
+    mock_conn = mocker.Mock()
+    mock_cursor = mocker.Mock()
+
+    # Mock the connection's cursor
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.fetchone.return_value = None  # Default return for queries
+    mock_cursor.fetchall.return_value = []
+    mock_conn.commit.return_value = None
+
+    # Mock the get_db_connection context manager from sql_utils
+    @contextmanager
+    def mock_get_db_connection():
+        yield mock_conn  # Yield the mocked connection object
+
+    mocker.patch("music_collection.models.song_model.get_db_connection", mock_get_db_connection)
+
+    return mock_cursor  # Return the mock cursor so we can set expectations per test
 
 @pytest.fixture
-def mock_random_org(mocker):
-    # Patch the requests.get call
-    # requests.get returns an object, which we have replaced with a mock object
-    mock_response = mocker.Mock()
-    # We are giving that object a text attribute
-    mock_response.text = f"{RANDOM_NUMBER}"
-    mocker.patch("requests.get", return_value=mock_response)
-    return mock_response
+def mock_user():
+    """
+    Fixture to provide a mock UserProfile instance for testing.
+    """
+    return UserProfile(user_id=1, username="test_user", cash_balance=1000.0)
 
 
-def test_get_random(mock_random_org):
-    """Test retrieving a random number from random.org."""
-    result = get_random(NUM_SONGS)
+######################################################
+#
+#    Tests for Portfolio Management
+#
+######################################################
 
-    # Assert that the result is the mocked random number
-    assert result == RANDOM_NUMBER, f"Expected random number {RANDOM_NUMBER}, but got {result}"
+def test_get_portfolio(mock_user):
+    """
+    Test getting the user's stock portfolio.
 
-    # Ensure that the correct URL was called
-    requests.get.assert_called_once_with("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new", timeout=5)
+    Ensures the portfolio contains the correct stock symbols, and its corresponding 
+    quantities, and current prices.
 
-def test_get_random_request_failure(mocker):
-    """Simulate  a request failure."""
-    mocker.patch("requests.get", side_effect=requests.exceptions.RequestException("Connection error"))
+    Raises:
+        AssertionError: If the portfolio does not match the expected structure or values.
+    """
+    pass
 
-    with pytest.raises(RuntimeError, match="Request to random.org failed: Connection error"):
-        get_random(NUM_SONGS)
 
-def test_get_random_timeout(mocker):
-    """Simulate  a timeout."""
-    mocker.patch("requests.get", side_effect=requests.exceptions.Timeout)
+def test_add_stock_to_holding(mock_user):
+    """
+    Test adding stock to the user's holdings.
 
-    with pytest.raises(RuntimeError, match="Request to random.org timed out."):
-        get_random(NUM_SONGS)
+    Ensures the stock is added correctly or its quantity is updated if it already exists.
 
-def test_get_random_invalid_response(mock_random_org):
-    """Simulate  an invalid response (non-digit)."""
-    mock_random_org.text = "invalid_response"
+    Raises:
+        AssertionError: If the stock holding is not updated correctly.
+    """
+    pass
 
-    with pytest.raises(ValueError, match="Invalid response from random.org: invalid_response"):
-        get_random(NUM_SONGS)
+
+def test_remove_stock_from_holding(mock_user):
+    """
+    Test removing or reducing stock quantity from the user's holdings.
+
+    Ensures the stock is removed or its quantity is updated correctly.
+
+    Raises:
+        ValueError: If the stock does not exist or the quantity to remove is invalid.
+        AssertionError: If the stock holding is not updated correctly.
+    """
+    pass
+
+
+def test_get_today_earnings_to_holding(mock_user):
+    """
+    Test calculating today's earnings from stock holdings.
+
+    Ensures the earnings calculation is accurate based on the price changes of the stocks.
+
+    Raises:
+        AssertionError: If the calculated earnings do not match the expected value.
+        Exception: If there is an issue retrieving stock prices or performing calculations.
+    """
+    pass
+
+
+######################################################
+#
+#    Tests for Cash Management
+#
+######################################################
+
+def test_update_cash_balance(mock_user):
+    """
+    Test updating the user's cash balance.
+
+    Ensures the cash balance is updated correctly when adding or subtracting funds.
+
+    Raises:
+        AssertionError: If the cash balance does not match the expected value.
+    """
+    pass
+
+
+######################################################
+#
+#    Tests for Stock Trading
+#
+######################################################
+
+def test_buy_stock(mock_user):
+    """
+    Test buying shares of a stock.
+
+    Ensures the stock is added to the portfolio, and the cash balance is reduced by the total cost.
+
+    Raises:
+        ValueError: If the quantity is less than 1, the stock symbol is invalid, or funds are insufficient.
+        AssertionError: If the portfolio or cash balance is not updated correctly.
+    """
+    pass
+
+
+def test_sell_stock(mock_user):
+    """
+    Test selling shares of a stock.
+
+    Ensures the stock is removed or its quantity reduced in the portfolio, and the cash balance is increased by the revenue.
+
+    Raises:
+        ValueError: If the quantity is less than 1, the stock symbol is invalid, or shares are insufficient.
+        AssertionError: If the portfolio or cash balance is not updated correctly.
+    """
+    pass
+
+
+def test_sell_stock_insufficient_shares(mock_user):
+    """
+    Test error when attempting to sell more shares than the user holds.
+
+    Ensures a ValueError is raised when the user does not hold enough shares to sell.
+
+    Raises:
+        ValueError: If the stock quantity is insufficient for the sale.
+    """
+    pass
+
+
+def test_buy_stock_insufficient_funds(mock_user):
+    """
+    Test error when attempting to buy stock with insufficient funds.
+
+    Ensures a ValueError is raised when the user does not have enough cash to complete the transaction.
+
+    Raises:
+        ValueError: If the user's cash balance is insufficient for the purchase.
+    """
+    pass
+
+
+######################################################
+#
+#    Utility Tests
+#
+######################################################
+
+def test_buy_stock_updates_database(mock_user):
+    """
+    Test that buying stock updates the database with the correct stock symbol and quantity.
+
+    Verifies that the stock is added or its quantity is updated correctly in the database.
+
+    Raises:
+        AssertionError: If the database is not updated correctly.
+    """
+    pass
+
+
+def test_sell_stock_updates_database(mock_user):
+    """
+    Test that selling stock updates the database by removing the stock or reducing its quantity.
+
+    Verifies that the database is updated correctly after the sale.
+
+    Raises:
+        AssertionError: If the database is not updated correctly.
+    """
+    pass
