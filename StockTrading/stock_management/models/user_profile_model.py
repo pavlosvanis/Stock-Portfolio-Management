@@ -18,7 +18,7 @@ class UserProfile:
         current_stock_holding (Dict[str, int]): A dictionary mapping stock symbols to quantities owned.
     """
 
-    def __init__(self, user_id: int, username: str, cash_balance: float = 0.0):
+    def __init__(self):
         """
         Initializes the UserProfile with the given user details, an empty stock holding,
         and an empty liked stock list.
@@ -28,9 +28,7 @@ class UserProfile:
             username (str): The user's name.
             cash_balance (float): The user's starting cash balance. Defaults to 0.0.
         """
-        self.user_id = user_id
-        self.username = username
-        self.cash_balance = cash_balance
+        self.cash_balance = 0,0
         self.current_stock_holding: Dict[str, int] = {}
 
     def get_portfolio(self) -> Dict[str, int]:
@@ -128,3 +126,8 @@ class UserProfile:
             Exception: If there is an issue retrieving stock prices or updating the portfolio.
         """
         pass
+
+    def clear_all_stock(self) -> None:
+        """
+        Clear all stocks
+        """
