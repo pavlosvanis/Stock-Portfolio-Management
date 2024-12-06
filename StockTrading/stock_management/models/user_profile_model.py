@@ -33,13 +33,13 @@ class UserProfile:
         self.cash_balance = cash_balance
         self.current_stock_holding: Dict[str, int] = {}
 
-    def get_portfolio(self) -> Dict[str, int, float]:
+    def get_portfolio(self) -> Dict[str, int]:
         """
         Retrieves the user's current stock portfolio.
 
         Returns:
-            Dict[str, int, float]: A dictionary containing stock symbols and the quantity
-            that the user hold for each of the stock, and each of the stock's current price.
+            Dict[str, int]: A dictionary containing stock symbols and the quantity
+            that the user hold for each of the stock.
         """
         pass
 
