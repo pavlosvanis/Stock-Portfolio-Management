@@ -7,7 +7,10 @@ from stock_management.db import db
 from stock_management.models import stock_model
 from stock_management.models.user_profile_model import UserProfile
 from stock_management.models.users_management_model import Users
+from stock_management.models.mongo_session_model import login_user, logout_user
 from stock_management.utils.sql_utils import check_database_connection, check_table_exists
+
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,6 +22,8 @@ def create_app(config_class=ProductionConfig):
     db.init_app(app)  # Initialize db with app
     with app.app_context():
         db.create_all()  # Recreate all tables
+    
+    user_profile_model = UserProfile()
 
     ####################################################
     #
@@ -119,7 +124,7 @@ def create_app(config_class=ProductionConfig):
     @app.route('/api/login', methods=['POST'])
     def login():
         """
-        Route to log in a user that checks if the password is correct.
+        Route to log in a user and load their combatants.
 
         Expected JSON Input:
             - username (str): The username of the user.
@@ -147,14 +152,60 @@ def create_app(config_class=ProductionConfig):
                 app.logger.warning("Login failed for username: %s", username)
                 raise Unauthorized("Invalid username or password.")
 
+            # Get user ID
+            user_id = Users.get_id_by_username(username)
+
+            # Load user's combatants into the battle model
+            login_user(user_id, user_profile_model)
+
             app.logger.info("User %s logged in successfully.", username)
-            return make_response(jsonify({"message": f"User {username} logged in successfully."}), 200)
+            return jsonify({"message": f"User {username} logged in successfully."}), 200
 
         except Unauthorized as e:
-            return make_response(jsonify({"error": str(e)}), 401)
+            return jsonify({"error": str(e)}), 401
         except Exception as e:
             app.logger.error("Error during login for username %s: %s", username, str(e))
-            return make_response(jsonify({"error": "An unexpected error occurred."}), 500)
+            return jsonify({"error": "An unexpected error occurred."}), 500
+
+
+    @app.route('/api/logout', methods=['POST'])
+    def logout():
+        """
+        Route to log out a user and save their combatants to MongoDB.
+
+        Expected JSON Input:
+            - username (str): The username of the user.
+
+        Returns:
+            JSON response indicating the success of the logout.
+
+        Raises:
+            400 error if input validation fails or user is not found in MongoDB.
+            500 error for any unexpected server-side issues.
+        """
+        data = request.get_json()
+        if not data or 'username' not in data:
+            app.logger.error("Invalid request payload for logout.")
+            raise BadRequest("Invalid request payload. 'username' is required.")
+
+        username = data['username']
+
+        try:
+            # Get user ID
+            user_id = Users.get_id_by_username(username)
+
+            # Save user's combatants and clear the battle model
+            logout_user(user_id, user_profile_model)
+
+            app.logger.info("User %s logged out successfully.", username)
+            return jsonify({"message": f"User {username} logged out successfully."}), 200
+
+        except ValueError as e:
+            app.logger.warning("Logout failed for username %s: %s", username, str(e))
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            app.logger.error("Error during logout for username %s: %s", username, str(e))
+            return jsonify({"error": "An unexpected error occurred."}), 500
 
 
     @app.route('/api/update-password', methods=['POST'])
