@@ -16,7 +16,6 @@ class UserProfile:
         username (str): The user's name.
         cash_balance (float): The user's available cash balance.
         current_stock_holding (Dict[str, int]): A dictionary mapping stock symbols to quantities owned.
-        current_stock_like_list (List[str]): A list of stock symbols the user has liked.
     """
 
     def __init__(self, user_id: int, username: str, cash_balance: float = 0.0):
@@ -33,7 +32,6 @@ class UserProfile:
         self.username = username
         self.cash_balance = cash_balance
         self.current_stock_holding: Dict[str, int] = {}
-        self.current_stock_like_list: List[str] = []
 
     def get_portfolio(self) -> Dict[str, int, float]:
         """
@@ -48,6 +46,7 @@ class UserProfile:
     def add_stock_to_holding(self, symbol: str, quantity: int) -> None:
         """
         Adds a stock to the user's holdings or updates the quantity if it already exists.
+        This method is used when the user buy a new stock.
 
         Args:
             symbol (str): The stock's ticker symbol.
@@ -74,28 +73,11 @@ class UserProfile:
     def remove_stock_from_holding(self, symbol: str, quantity: int) -> None:
         """
         Removes or reduces the quantity of a stock in the user's holdings.
+        This method is used when the user sells of the stock in the holdings.
 
         Args:
             symbol (str): The stock's ticker symbol.
             quantity (int): The number of shares to remove.
-        """
-        pass
-
-    def add_stock_to_like_list(self, symbol: str) -> None:
-        """
-        Adds a stock to the user's liked stock list.
-
-        Args:
-            symbol (str): The stock's ticker symbol to like.
-        """
-        pass
-
-    def remove_stock_from_like_list(self, symbol: str) -> None:
-        """
-        Removes a stock from the user's liked stock list.
-
-        Args:
-            symbol (str): The stock's ticker symbol to unlike.
         """
         pass
 
