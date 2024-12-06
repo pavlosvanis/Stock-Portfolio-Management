@@ -1,6 +1,5 @@
 import logging
 from typing import Dict, List
-from stock_management.models.stock_model import Stock
 from stock_management.utils.logger import configure_logger
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ class UserProfile:
         self.cash_balance = 0,0
         self.current_stock_holding: Dict[str, int] = {}
 
-    def get_portfolio(self) -> Dict[str, Stock]:
+    def get_portfolio(self) -> Dict[str, int]:
         """
         Retrieves the user's current stock portfolio.
 
