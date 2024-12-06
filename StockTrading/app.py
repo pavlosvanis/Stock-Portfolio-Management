@@ -20,8 +20,6 @@ def create_app(config_class=ProductionConfig):
     with app.app_context():
         db.create_all()  # Recreate all tables
 
-    user_profile_model = UserProfile()
-
     ####################################################
     #
     # Healthchecks
