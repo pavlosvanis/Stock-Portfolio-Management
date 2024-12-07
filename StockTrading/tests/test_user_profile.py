@@ -11,6 +11,12 @@ from stock_management.models.user_profile_model import UserProfile
 #    Fixtures
 #
 ######################################################
+@pytest.fixture
+def mock_stock_price_api(mocker):
+    # Mock the function or API call that fetches stock prices
+    mock_response = mocker.patch("module_name.get_stock_price")
+    mock_response.return_value = 150  # Set a fixed price for testing
+    return mock_response
 
 @pytest.fixture
 def mock_user():
@@ -36,7 +42,10 @@ def test_get_portfolio(mock_user):
     Raises:
         AssertionError: If the portfolio does not match the expected structure or values.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 10, "TSLA": 5}
+    portfolio = mock_user.get_portfolio()
+    
+    assert portfolio == {"AAPL": 10, "TSLA": 5}, "Portfolio does not match expected values"
 
 
 def test_add_stock_to_holding(mock_user):
@@ -48,7 +57,11 @@ def test_add_stock_to_holding(mock_user):
     Raises:
         AssertionError: If the stock holding is not updated correctly.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 10}
+    mock_user.add_stock_to_holding("AAPL", 5)
+    mock_user.add_stock_to_holding("TSLA", 8)
+    
+    assert mock_user.current_stock_holding == {"AAPL": 15, "TSLA": 8}, "Stock holdings not updated correctly"
 
 
 def test_remove_stock_from_holding(mock_user):
@@ -61,7 +74,16 @@ def test_remove_stock_from_holding(mock_user):
         ValueError: If the stock does not exist or the quantity to remove is invalid.
         AssertionError: If the stock holding is not updated correctly.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 10}
+    
+    mock_user.remove_stock_from_holding("AAPL", 5)
+    assert mock_user.current_stock_holding == {"AAPL": 5}, "Stock quantity not reduced correctly"
+    
+    mock_user.remove_stock_from_holding("AAPL", 5)
+    assert "AAPL" not in mock_user.current_stock_holding, "Stock not removed when quantity reaches zero"
+    
+    with pytest.raises(ValueError):
+        mock_user.remove_stock_from_holding("AAPL", 1)
 
 
 def test_get_today_earnings_to_holding(mock_user):
@@ -74,7 +96,11 @@ def test_get_today_earnings_to_holding(mock_user):
         AssertionError: If the calculated earnings do not match the expected value.
         Exception: If there is an issue retrieving stock prices or performing calculations.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 10}
+    mock_stock_price_api.return_value = 200  # Mock today's stock price
+
+    earnings = mock_user.get_today_earnings_to_holding()
+    assert earnings == (200 - 150) * 10, "Earnings calculation is incorrect."
 
 
 ######################################################
@@ -92,7 +118,11 @@ def test_update_cash_balance(mock_user):
     Raises:
         AssertionError: If the cash balance does not match the expected value.
     """
-    pass
+    mock_user.update_cash_balance(500)
+    assert mock_user.cash_balance == 500, "Cash balance not updated correctly."
+
+    mock_user.update_cash_balance(-100)
+    assert mock_user.cash_balance == 400, "Cash balance not subtracted correctly."
 
 
 ######################################################
@@ -111,7 +141,14 @@ def test_buy_stock(mock_user):
         ValueError: If the quantity is less than 1, the stock symbol is invalid, or funds are insufficient.
         AssertionError: If the portfolio or cash balance is not updated correctly.
     """
-    pass
+    mock_user.cash_balance = 1000.0
+    mock_stock_price_api.return_value = 50  # Mock stock price
+
+    mock_user.buy_stock("AAPL", 10)
+
+    assert mock_user.current_stock_holding["AAPL"] == 10, "Stock not added correctly."
+    assert mock_user.cash_balance == 500.0, "Cash balance not updated correctly."
+    mock_stock_price_api.assert_called_once_with("AAPL")
 
 
 def test_sell_stock(mock_user):
@@ -124,7 +161,14 @@ def test_sell_stock(mock_user):
         ValueError: If the quantity is less than 1, the stock symbol is invalid, or shares are insufficient.
         AssertionError: If the portfolio or cash balance is not updated correctly.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 10}
+    mock_user.cash_balance = 100.0
+    mock_stock_price_api.return_value = 50  # Mock stock price
+
+    mock_user.sell_stock("AAPL", 5)
+
+    assert mock_user.current_stock_holding["AAPL"] == 5, "Stock quantity not updated correctly."
+    assert mock_user.cash_balance == 350.0, "Cash balance not updated correctly."
 
 
 def test_sell_stock_insufficient_shares(mock_user):
@@ -136,7 +180,10 @@ def test_sell_stock_insufficient_shares(mock_user):
     Raises:
         ValueError: If the stock quantity is insufficient for the sale.
     """
-    pass
+    mock_user.current_stock_holding = {"AAPL": 2}
+
+    with pytest.raises(ValueError):
+        mock_user.sell_stock("AAPL", 5)
 
 
 def test_buy_stock_insufficient_funds(mock_user):
@@ -148,7 +195,11 @@ def test_buy_stock_insufficient_funds(mock_user):
     Raises:
         ValueError: If the user's cash balance is insufficient for the purchase.
     """
-    pass
+    mock_user.cash_balance = 100.0
+    mock_stock_price_api.return_value = 50  # Mock stock price
+
+    with pytest.raises(ValueError):
+        mock_user.buy_stock("AAPL", 3)
 
 
 ######################################################
