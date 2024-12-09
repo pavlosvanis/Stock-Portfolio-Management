@@ -13,28 +13,13 @@ class UserProfile:
     """
     A class to manage a user's profile, including cash balance, stock holdings,
     and their liked stock list.
-
-    Attributes:
-        user_id (int): The unique identifier for the user.
-        username (str): The user's name.
-        cash_balance (float): The user's available cash balance.
-        current_stock_holding (Dict[str, int]): A dictionary mapping stock symbols to quantities owned.
     """
    
-        
-
-
     def __init__(self, cash_balance=0):
         """
         Initializes the UserProfile with the given user details, an empty stock holding,
         and an empty liked stock list.
-
-        Args:
-            user_id (int): The unique identifier for the user.
-            username (str): The user's name.
-            cash_balance (float): The user's starting cash balance. Defaults to 0.0.
         """
-
         self.cash_balance = cash_balance
 
         if self.cash_balance < 0:
