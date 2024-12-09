@@ -10,10 +10,15 @@ from stock_management.models.users_management_model import Users
 from stock_management.models.mongo_session_model import login_user, logout_user
 from stock_management.utils.sql_utils import check_database_connection, check_table_exists
 
-
+from stock_management.models.stock_model import (
+    lookup_stock,
+    get_price_details,
+    fetch_historical_data
+)
 
 # Load environment variables from .env file
 load_dotenv()
+
 
 def create_app(config_class=ProductionConfig):
     app = Flask(__name__)
@@ -22,7 +27,7 @@ def create_app(config_class=ProductionConfig):
     db.init_app(app)  # Initialize db with app
     with app.app_context():
         db.create_all()  # Recreate all tables
-    
+
     user_profile_model = UserProfile()
 
     ####################################################
@@ -30,7 +35,6 @@ def create_app(config_class=ProductionConfig):
     # Healthchecks
     #
     ####################################################
-
 
     @app.route('/api/health', methods=['GET'])
     def healthcheck() -> Response:
@@ -42,7 +46,7 @@ def create_app(config_class=ProductionConfig):
         """
         app.logger.info('Health check')
         return make_response(jsonify({'status': 'healthy'}), 200)
-    
+
     ##########################################################
     #
     # Users Management
@@ -167,7 +171,6 @@ def create_app(config_class=ProductionConfig):
             app.logger.error("Error during login for username %s: %s", username, str(e))
             return jsonify({"error": "An unexpected error occurred."}), 500
 
-
     @app.route('/api/logout', methods=['POST'])
     def logout():
         """
@@ -207,7 +210,6 @@ def create_app(config_class=ProductionConfig):
             app.logger.error("Error during logout for username %s: %s", username, str(e))
             return jsonify({"error": "An unexpected error occurred."}), 500
 
-
     @app.route('/api/update-password', methods=['POST'])
     def update_password():
         """
@@ -236,7 +238,7 @@ def create_app(config_class=ProductionConfig):
             if not username or not old_password or not new_password:
                 app.logger.warning('Invalid input: Missing username, old_password, or new_password')
                 return make_response(jsonify({'error': 'Username, old_password, and new_password are required'}), 400)
-        
+
             # Verify the old password using verify_user_credentials
             app.logger.info('Verifying old password for username: %s', username)
             if not Users.check_password(username, old_password):
@@ -247,20 +249,85 @@ def create_app(config_class=ProductionConfig):
             Users.update_password(username, new_password)
             app.logger.info('Password updated successfully for username: %s', username)
             return make_response(jsonify({'message': 'Password updated successfully'}), 200)
-        
+
         except ValueError as e:
             app.logger.error('Password update failed for username %s: %s', username, str(e))
-            return make_response(jsonify({'error': str(e)}), 400) 
+            return make_response(jsonify({'error': str(e)}), 400)
         except Exception as e:
             app.logger.error('Unexpected error during password update: %s', str(e))
             return make_response(jsonify({'error': 'An unexpected error occurred'}), 500)
+
+    @app.route('/api/lookup-stock/<string:symbol>', methods=['GET'])
+    def lookup_stock_route(symbol: str) -> Response:
+        """
+        Route to look up a stock (retrieving basic details) based on symbol.
+        Path Parameters:
+            - symbol (str): The stock's ticker symbol.
+        Returns:
+            JSON response with the stock basic details or an error message.
+        """
+        try:
+            app.logger.info(f"Looking up stock with symbol: {symbol}")
+            stock_basic_details = lookup_stock(symbol)
+            return make_response(jsonify({"status": "success", "data": stock_basic_details}), 200)
+        except ValueError as e:
+            app.logger.error(f"Error looking up stock with symbol: {e}")
+            return make_response(jsonify({"error": str(e)}), 400)
+        except Exception as e:
+            app.logger.error(f"Unexpected error: {e}")
+            return make_response(jsonify({"error": "An unexpected error occurred"}), 500)
+
+    @app.route('/api/get-price-details/<string:symbol>', methods=['GET'])
+    def get_price_details_route(symbol: str) -> Response:
+        """
+        Route to get price details of a stock based on symbol.
+        Path Parameters:
+            - symbol (str): The stock's ticker symbol.
+        Returns:
+            JSON response with the stock price details or an error message.
+        """
+        try:
+            app.logger.info(f"Getting price details for stock with symbol: {symbol}")
+            stock_price_details = get_price_details(symbol)
+            return make_response(jsonify({"status": "success", "data": stock_price_details}), 200)
+        except ValueError as e:
+            app.logger.error(f"Error getting price details for stock with symbol: {e}")
+            return make_response(jsonify({"error": str(e)}), 400)
+        except Exception as e:
+            app.logger.error(f"Unexpected error: {e}")
+            return make_response(jsonify({"error": "An unexpected error occurred"}), 500)
+
+    @app.route('/api/fetch-historical-data/<string:symbol>/<string:start_date>/<string:end_date>', methods=['GET'])
+    def fetch_historical_data_route(symbol: str, start_date: str, end_date: str) -> Response:
+        """
+        Route to fetch historical data of a stock based on symbol within a specified date range.
+        Path Parameters:
+            - symbol (str): The stock's ticker symbol.
+            - start_date (str): The start date for historical data (e.g., `YYYY-MM-DD`).
+            - end_date (str): The end date for historical data (e.g., `YYYY-MM-DD`).
+        Returns:
+            JSON response with the stock's historical data for the specified data range or an error message.
+        """
+
+        try:
+            app.logger.info(
+                f"Fetching historical data for stock with symbol: {symbol} between {start_date} and {end_date}.")
+            stock_historical_data = fetch_historical_data(symbol, start_date, end_date)
+            return make_response(jsonify({"status": "success", "data": stock_historical_data}), 200)
+        except ValueError as e:
+            app.logger.error(f"Error fetching historical data for stock with symbol: {e}")
+            return make_response(jsonify({"error": str(e)}), 400)
+        except Exception as e:
+            app.logger.error(f"Unexpected error: {e}")
+            return make_response(jsonify({"error": "An unexpected error occurred"}), 500)
+
+    # TODO DELETE MEALS AND WHAT IS NOT NEEDED (CHECK THAT WE DONT DELETE DATABASE RELATED CODE THAT IF IT IS NEEDED)
 
     ##########################################################
     #
     # Meals
     #
     ##########################################################
-
 
     @app.route('/api/create-meal', methods=['POST'])
     def add_meal() -> Response:
@@ -299,7 +366,8 @@ def create_app(config_class=ProductionConfig):
                 if round(price, 2) != price:
                     raise ValueError("Price has more than two decimal places")
             except ValueError as e:
-                return make_response(jsonify({'error': 'Price must be a valid float with at most two decimal places'}), 400)
+                return make_response(jsonify({'error': 'Price must be a valid float with at most two decimal places'}),
+                                     400)
 
             # Call the Meals function to add the combatant to the database
             app.logger.info('Adding meal: %s, %s, %.2f, %s', meal, cuisine, price, difficulty)
@@ -310,7 +378,6 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error("Failed to add combatant: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
-
 
     @app.route('/api/delete-meal/<int:meal_id>', methods=['DELETE'])
     def delete_meal(meal_id: int) -> Response:
@@ -332,7 +399,6 @@ def create_app(config_class=ProductionConfig):
             app.logger.error(f"Error deleting meal: {e}")
             return make_response(jsonify({'error': str(e)}), 500)
 
-
     @app.route('/api/get-meal-by-id/<int:meal_id>', methods=['GET'])
     def get_meal_by_id(meal_id: int) -> Response:
         """
@@ -352,7 +418,6 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error(f"Error retrieving meal by ID: {e}")
             return make_response(jsonify({'error': str(e)}), 500)
-
 
     @app.route('/api/get-meal-by-name/<string:meal_name>', methods=['GET'])
     def get_meal_by_name(meal_name: str) -> Response:
@@ -376,7 +441,6 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error(f"Error retrieving meal by name: {e}")
             return make_response(jsonify({'error': str(e)}), 500)
-
 
     @app.route('/api/init-db', methods=['POST'])
     def init_db():
@@ -410,7 +474,6 @@ def create_app(config_class=ProductionConfig):
     # Battle
     #
     ############################################################
-
 
     @app.route('/api/battle', methods=['GET'])
     def battle() -> Response:
@@ -503,13 +566,11 @@ def create_app(config_class=ProductionConfig):
             app.logger.error("Failed to prepare combatants: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
 
-
     ############################################################
     #
     # Leaderboard
     #
     ############################################################
-
 
     @app.route('/api/leaderboard', methods=['GET'])
     def get_leaderboard() -> Response:
@@ -536,6 +597,7 @@ def create_app(config_class=ProductionConfig):
             return make_response(jsonify({'error': str(e)}), 500)
 
     return app
+
 
 if __name__ == '__main__':
     app = create_app()
