@@ -33,26 +33,30 @@ Retrieves detailed information about a specific stock using its ticker symbol. T
   
 
   *Success Example Response:*
-    {
+   ```
+   {
     "status": "success",
-        "data": {
-            "Symbol": "NVDA",
-            "Name": "NVIDIA Corporation",
-            "Exchange": "NASDAQ",
-            "Description": ""Designs and manufactures GPUs..."",
-            "P/E Ratio": "95.4",
-            "52 Week High": "480.0",
-            "52 Week Low": "180.0"
-        }
-     }
+    "data": {
+        "Symbol": "NVDA",
+        "Name": "NVIDIA Corporation",
+        "Exchange": "NASDAQ",
+        "Description": "Designs and manufactures GPUs...",
+        "P/E Ratio": "95.4",
+        "52 Week High": "480.0",
+        "52 Week Low": "180.0"
+    }
+ ```
+
         
   *Error Example Response:*
+   ```
    {
     "status": "error",
     "data": {
         "error": "The stock symbol: INVALID is invalid. Please check the symbol and try again."
     }
    }
+  ```
 
 ### Get Price Details
 
@@ -82,6 +86,7 @@ Retrieves the latest market price details for a specific stock using its ticker 
   
 
   *Success Example Response:*
+   ```
    {
     "status": "success",
     "data": {
@@ -90,14 +95,17 @@ Retrieves the latest market price details for a specific stock using its ticker 
         "Change Percentage": "-1.81%"
     }
    }
+   ```
         
   *Error Example Response:*
+   ```
    {
     "status": "error",
     "data": {
         "error": "The stock symbol: INVALID is invalid. Please check the symbol and try again."
     }
    }
+   ```
 
 ### Fetch Historical Data
 
@@ -131,7 +139,7 @@ Fetches historical price data for a stock within a specified date range. The dat
     curl -X GET http://127.0.0.1:5000/api/stocks/NVDA/historical/2024-01-01/2024-12-31
   
   *Success Example Response:*
-
+    ```
     {
     "status": "success",
     "data": [
@@ -152,17 +160,19 @@ Fetches historical price data for a stock within a specified date range. The dat
             "volume": "1200000"
         }
     ]
-}
+    }
+    ```
 
         
   *Error Example Response:*
-   
-    {
+    ```
+   {
     "status": "error",
     "data": {
         "error": "The stock symbol: INVALID is invalid. Please check the symbol again."
     }
-}
+   }
+   ```
 
     
 
