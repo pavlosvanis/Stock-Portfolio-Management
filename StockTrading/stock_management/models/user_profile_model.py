@@ -341,19 +341,15 @@ class UserProfile:
     
     def load_stock(self, stock) -> None:
         """
-        Add the given stock to holding_stocks. If the stock already exists, update its quantity.
-        Used for initial loading of user stocks data stored in mongodb
-        
+        Add the given stock to current_stock_holding. If the stock exists, update the stock's quantity.
+
         Args:
-            stock (Stock): The stock to add or update in the portfolio.
+            stock (dict): a dictionary that contains the symbol and quantity of a stock.
         """
-        # Check if the stock already exists in holding_stocks
         if stock["symbol"] in self.current_stock_holding:
             stock_existed = stock["symbol"]
             stock_existed_price = self.current_stock_holding[stock["symbol"]]
-
             logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_price)
         else:
-            # Add the stock to holding_stocks
             self.current_stock_holding[stock["symbol"]] = stock_existed_price
             logger.info("Added new stock: %s with quantity %d.", stock_existed, stock.quantity)
