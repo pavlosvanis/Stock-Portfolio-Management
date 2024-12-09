@@ -36,7 +36,7 @@ class UserProfile:
         """
 
         self.cash_balance = cash_balance
-        
+
         if self.cash_balance < 0:
             raise ValueError("Cash balance must be non-negative")
 
@@ -338,3 +338,22 @@ class UserProfile:
         except Exception as e:
             logger.error("Error clearing all stocks: %s", str(e))
             raise e
+    
+    def load_stock(self, stock) -> None:
+        """
+        Add the given stock to holding_stocks. If the stock already exists, update its quantity.
+        Used for initial loading of user stocks data stored in mongodb
+        
+        Args:
+            stock (Stock): The stock to add or update in the portfolio.
+        """
+        # Check if the stock already exists in holding_stocks
+        if stock["symbol"] in self.current_stock_holding:
+            stock_existed = stock["symbol"]
+            stock_existed_price = self.current_stock_holding[stock["symbol"]]
+
+            logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_price)
+        else:
+            # Add the stock to holding_stocks
+            self.current_stock_holding[stock["symbol"]] = stock_existed_price
+            logger.info("Added new stock: %s with quantity %d.", stock_existed, stock.quantity)
