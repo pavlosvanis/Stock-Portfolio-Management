@@ -15,6 +15,17 @@ url = "https://www.alphavantage.co/query"
 
 @dataclass
 class Stock:
+    """
+        Represents a stock with its symbol, name, price, price change, and P/E ratio.
+
+        Attributes:
+            symbol (str): The stock's ticker symbol.
+            name (str): The name of the company.
+            price (float): Current stock price.
+            price_change (float): Daily price change compared to yesterday.
+            pe_ratio (float): Price-to-earnings ratio.
+    """
+
     symbol: str
     name: str
     price: float
@@ -44,7 +55,7 @@ def lookup_stock(symbol: str) -> dict:
 
     Raises:
         ValueError: If the stock symbol is invalid.
-        Exception: If there is an issue with the API or database.
+        Exception: If there is an issue with the API request.
     """
 
     overview_parameters = {
@@ -85,7 +96,7 @@ def get_price_details(symbol: str) -> dict:
 
     Raises:
         ValueError: If the stock symbol is invalid.
-        Exception: If there is an issue with the API or database.
+        Exception: If there is an issue with the API request.
     """
 
     global_parameters = {
@@ -126,8 +137,11 @@ def fetch_historical_data(symbol: str, start_date: str, end_date: str) -> list[d
                     is unavailable its default value will be "N/A".
 
     Raises:
-        ValueError: If the symbol or date range is invalid.
-        Exception: If there is an issue with the API or database.
+        ValueError: -If the symbol is invalid .
+                    -If the date format is invalid (not in `YYYY-MM-DD` format).
+                    -If no historical data is found for the given symbol or date range.
+
+        Exception: If there is an issue with the API request.
     """
 
     # Validate date format
@@ -149,9 +163,13 @@ def fetch_historical_data(symbol: str, start_date: str, end_date: str) -> list[d
         raise Exception(f"API request failed with status code {response.status_code}.")
 
     data = response.json()
+
+    if "Error Message" in data: #invalid symbol
+        raise ValueError(f"The stock symbol: {symbol} is invalid. Please check the symbol again.")
+
     time_series = data.get("Time Series (Daily)", {})
 
-    if not time_series:
+    if not time_series: #no data in the response
         raise ValueError(f"No historical data found for the stock symbol: {symbol}.")
 
     # Filter data based on date range
