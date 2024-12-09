@@ -139,7 +139,7 @@ Fetches historical price data for a stock within a specified date range. The dat
     curl -X GET http://127.0.0.1:5000/api/stocks/NVDA/historical/2024-01-01/2024-12-31
   
   *Success Example Response:*
-    ```
+  ```
     {
     "status": "success",
     "data": [
@@ -161,11 +161,11 @@ Fetches historical price data for a stock within a specified date range. The dat
         }
     ]
     }
-    ```
+  ```
 
         
   *Error Example Response:*
-    ```
+   ```
    {
     "status": "error",
     "data": {
