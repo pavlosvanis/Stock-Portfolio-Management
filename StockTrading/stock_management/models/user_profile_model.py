@@ -324,9 +324,9 @@ class UserProfile:
             logger.error("Error selling stock: %s", str(e))
             raise e
 
-    def clear_all_stock(self) -> None:
+    def clear_all_stock_and_balance(self) -> None:
         """
-        Clear all stocks
+        Clear all stocks and set balance to 0.0
         """
         try:
             with get_db_connection() as conn:
