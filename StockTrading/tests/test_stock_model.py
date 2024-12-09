@@ -116,8 +116,8 @@ def test_lookup_stock_invalid_symbol(mocker, mock_invalid_symbol_response):
 
     mocker.patch('requests.get', side_effect=mock_invalid_symbol_response)
 
-    with pytest.raises(ValueError, match="The stock symbol: INVALID_SYMBOL is invalid"):
-        lookup_stock("INVALID_SYMBOL")
+    with pytest.raises(ValueError, match="The stock symbol: INVALID is invalid"):
+        lookup_stock("INVALID")
 
 
 def test_lookup_stock_faulty_API(mocker, mock_faulty_api_response):
@@ -147,8 +147,8 @@ def test_get_price_details_invalid_symbol(mocker, mock_invalid_symbol_response):
 
     mocker.patch('requests.get', side_effect=mock_invalid_symbol_response)
 
-    with pytest.raises(ValueError, match="The stock symbol: INVALID_SYMBOL is invalid"):
-        get_price_details("INVALID_SYMBOL")
+    with pytest.raises(ValueError, match="The stock symbol: INVALID is invalid"):
+        get_price_details("INVALID")
 
 
 def test_get_price_details_faulty_API(mocker, mock_faulty_api_response):
