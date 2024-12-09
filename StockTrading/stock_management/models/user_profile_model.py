@@ -79,57 +79,22 @@ class UserProfile:
             logger.error("Database error: %s", str(e))
             raise e
 
-    def add_stock_to_portfolio(user_id: int, symbol: str, quantity: int) -> None:
+    def add_stock_to_portfolio(self, stock: dict) -> None:
         """
         Adds a stock to the user's holdings or updates the quantity if it already exists.
         This method is used when the user buys a new stock.
 
         Args:
-            user_id (int): The ID of the user whose portfolio is being updated.
-            symbol (str): The stock's ticker symbol.
-            quantity (int): The number of shares to add.
+            stock (dict): a dictionary that contains the symbol and quantity of a stock.
         """
-        try:
-            if quantity <= 0:
-                raise ValueError("Quantity must be greater than 0.")
 
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-            
-                # Check if the stock already exists in the user's portfolio
-                cursor.execute("""
-                    SELECT quantity 
-                    FROM portfolio 
-                    WHERE user_id = ? AND stock_symbol = ? AND deleted = 0
-                """, (user_id, symbol))
-            
-                row = cursor.fetchone()
-            
-                if row:
-                    # Update the quantity if the stock already exists
-                    new_quantity = row[0] + quantity
-                    cursor.execute("""
-                        UPDATE portfolio 
-                        SET quantity = ? 
-                        WHERE user_id = ? AND stock_symbol = ? AND deleted = 0
-                    """, (new_quantity, user_id, symbol))
-                    logger.info("Updated stock %s for user ID %s. New quantity: %s", symbol, user_id, new_quantity)
-                else:
-                    # Insert a new stock entry if it doesn't exist
-                    cursor.execute("""
-                        INSERT INTO portfolio (user_id, stock_symbol, quantity, deleted)
-                        VALUES (?, ?, ?, 0)
-                    """, (user_id, symbol, quantity))
-                    logger.info("Added stock %s for user ID %s with quantity: %s", symbol, user_id, quantity)
-            
-                conn.commit()
-
-        except sqlite3.Error as e:
-            logger.error("Database error while adding stock: %s", str(e))
-            raise e
-        except ValueError as ve:
-            logger.error("Value error: %s", str(ve))
-            raise ve
+        if stock["symbol"] in self.current_stock_holding:
+            stock_existed = stock["symbol"]
+            stock_existed_quantity = self.current_stock_holding[stock["symbol"]]
+            logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_quantity)
+        else:
+            self.current_stock_holding[stock["symbol"]] = stock["qunatity"]
+            logger.info("Added new stock: %s with quantity %d.", stock["symbol"], stock["quantity"])
 
 
     def get_today_earnings_to_holding(self) -> float:
@@ -328,28 +293,6 @@ class UserProfile:
         """
         Clear all stocks and set balance to 0.0
         """
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Mark all stocks as deleted
-                cursor.execute("UPDATE portfolio SET deleted = 1 WHERE user_id = ?", (self.user_id,))
-                conn.commit()
-
-        except Exception as e:
-            logger.error("Error clearing all stocks: %s", str(e))
-            raise e
-    
-    def load_stock(self, stock) -> None:
-        """
-        Add the given stock to current_stock_holding. If the stock exists, update the stock's quantity.
-
-        Args:
-            stock (dict): a dictionary that contains the symbol and quantity of a stock.
-        """
-        if stock["symbol"] in self.current_stock_holding:
-            stock_existed = stock["symbol"]
-            stock_existed_quantity = self.current_stock_holding[stock["symbol"]]
-            logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_quantity)
-        else:
-            self.current_stock_holding[stock["symbol"]] = stock["qunatity"]
-            logger.info("Added new stock: %s with quantity %d.", stock["symbol"], stock["quantity"])
+        self.current_stock_holding = {}
+        self.cash_balance = 0.0
+        logger.info("Current stock holding cleared and balance set to 0.")
