@@ -1,6 +1,6 @@
 
 import logging
-from typing import Dict, List
+from typing import Dict, Tuple
 import sqlite3
 from stock_management.utils.logger import configure_logger
 from stock_management.utils.sql_utils import get_db_connection
@@ -29,9 +29,9 @@ class UserProfile:
         self.username = ""
 
         # Dict[<symbol>, (<quantity>, <bought_price>)]
-        self.current_stock_holding: Dict[str, (int, float)] = {} 
+        self.current_stock_holding: Dict[str, Tuple[int, float]] = {} 
     
-    def get_holding_stocks(self) -> Dict[str, (int, float)]:
+    def get_holding_stocks(self) -> Dict[str, Tuple[int, float]]:
         return self.current_stock_holding
     
     def get_cash_balance(self) -> float:
