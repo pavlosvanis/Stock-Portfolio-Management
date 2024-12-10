@@ -487,11 +487,6 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error(f"Error selling stock: {e}")
             return make_response(jsonify({'error': str(e)}), 400)
-
-
-
-    
-    # TODO DELETE MEALS AND WHAT IS NOT NEEDED (CHECK THAT WE DONT DELETE DATABASE RELATED CODE THAT IF IT IS NEEDED)
     
     ##########################################################
     #
@@ -499,76 +494,227 @@ def create_app(config_class=ProductionConfig):
     #
     ##########################################################
 
-
-    @app.route('/api/clear-combatants', methods=['POST'])
-    def clear_combatants() -> Response:
+    @app.route('/api/get-portfolio', methods=['GET'])
+    def get_portfolio() -> Response:
         """
-        Route to clear the list of combatants for the battle.
+        Route to get the user's stock portfolio.
 
         Returns:
-            JSON response indicating success of the operation.
+            JSON response with the portfolio details.
+
         Raises:
-            500 error if there is an issue clearing combatants.
+            500 error if there is an unexpected issue during the operation.
         """
         try:
-            app.logger.info('Clearing all combatants...')
-            battle_model.clear_combatants()
-            app.logger.info('Combatants cleared.')
-            return make_response(jsonify({'status': 'combatants cleared'}), 200)
+            app.logger.info("Getting user portfolio...")
+            portfolio = user_profile_model.get_portfolio()
+            return make_response(jsonify({'status': 'Get portfolio successful', 'portfolio': portfolio}), 200)
         except Exception as e:
-            app.logger.error("Failed to clear combatants: %s", str(e))
+            app.logger.error("Failed to fetch portfolio: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
 
-    @app.route('/api/get-combatants', methods=['GET'])
-    def get_combatants() -> Response:
+
+    @app.route('/api/get-total-values', methods=['GET'])
+    def get_total_values() -> Response:
         """
-        Route to get the list of combatants for the battle.
+        Route to get the user's total portfolio values.
 
         Returns:
-            JSON response with the list of combatants.
+            JSON response with total stock value, cash balance, and overall portfolio value.
+
+        Raises:
+            500 error if there is an unexpected issue during the operation.
         """
         try:
-            app.logger.info('Getting combatants...')
-            combatants = battle_model.get_combatants()
-            return make_response(jsonify({'status': 'success', 'combatants': combatants}), 200)
+            app.logger.info("Calculating total portfolio values...")
+            total_values = user_profile_model.get_current_total_values()
+            return make_response(jsonify({'status': 'success', 'total_values': total_values}), 200)
         except Exception as e:
-            app.logger.error("Failed to get combatants: %s", str(e))
+            app.logger.error("Failed to calculate total portfolio values: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
 
-    @app.route('/api/prep-combatant', methods=['POST'])
-    def prep_combatant() -> Response:
-        """
-        Route to prepare a prep a meal making it a combatant for a battle.
 
-        Parameters:
-            - meal (str): The name of the meal
+    @app.route('/api/add-stock', methods=['POST'])
+    def add_stock() -> Response:
+        """
+        Route to add stock to the user's portfolio.
+
+        Request Body:
+            - symbol (str): The stock symbol.
+            - quantity (int): The number of shares.
+            - bought_price (float): The purchase price of the stock.
 
         Returns:
-            JSON response indicating the success of combatant preparation.
+            JSON response indicating success or failure.
+
         Raises:
-            500 error if there is an issue preparing combatants.
+            400 error if input validation fails.
+            500 error if there is an unexpected issue during the update.
         """
         try:
             data = request.json
-            if not data or 'meal' not in data:
-                return make_response(jsonify({'error': 'Meal name is required'}), 400)
-            meal = data.get('meal')
-            app.logger.info("Preparing combatant: %s", meal)
+            if not data or 'symbol' not in data or 'quantity' not in data or 'bought_price' not in data:
+                return make_response(jsonify({'error': 'Missing some of the required fields: symbol, quantity, bought_price'}), 400)
 
-            if not meal:
-                raise BadRequest('You must name a combatant')
+            symbol = data['symbol']
+            quantity = int(data['quantity']) # cast to int
+            bought_price = float(data['bought_price']) # cast to float
 
-            try:
-                meal = Meals.get_meal_by_name(meal)
-                battle_model.prep_combatant(meal)
-                combatants = battle_model.get_combatants()
-            except Exception as e:
-                app.logger.error("Failed to prepare combatant: %s", str(e))
-                return make_response(jsonify({'error': str(e)}), 500)
-            return make_response(jsonify({'status': 'combatant prepared', 'combatants': combatants}), 200)
-
+            app.logger.info("Adding stock %s to portfolio...", symbol)
+            user_profile_model.add_stock_to_portfolio(symbol, quantity, bought_price)
+            return make_response(jsonify({'status': 'success', 'message': f"{quantity} shares of {symbol} added."}), 200)
         except Exception as e:
-            app.logger.error("Failed to prepare combatants: %s", str(e))
+            app.logger.error("Failed to add stock: %s", str(e))
+            return make_response(jsonify({'error': str(e)}), 500)
+
+
+    @app.route('/api/remove-stock', methods=['POST'])
+    def remove_stock() -> Response:
+        """
+        Route to remove stock from the user's portfolio.
+
+        Request Body:
+            - symbol (str): The stock symbol.
+            - quantity (int): The number of shares to remove.
+
+        Returns:
+            JSON response indicating success or failure.
+
+        Raises:
+            400 error if input validation fails.
+            500 error if there is an unexpected issue during the update.
+        """
+        try:
+            data = request.json
+            if not data or 'symbol' not in data or 'quantity' not in data:
+                return make_response(jsonify({'error': 'Missing some of the required fields: symbol, quantity'}), 400)
+
+            symbol = data['symbol']
+            quantity = int(data['quantity']) # cast to int
+
+            app.logger.info("Removing stock %s from portfolio...", symbol)
+            user_profile_model.remove_stock_from_holding(symbol, quantity)
+            return make_response(jsonify({'status': 'success', 'message': f"Removed {quantity} shares of {symbol}."}), 200)
+        except Exception as e:
+            app.logger.error("Failed to remove stock: %s", str(e))
+            return make_response(jsonify({'error': str(e)}), 500)
+
+
+    @app.route('/api/update-cash', methods=['POST'])
+    def update_cash() -> Response:
+        """
+        Route to update the user's cash balance.
+
+        Request Body:
+            - amount (float): The amount to add or subtract.
+
+        Returns:
+            JSON response indicating success or failure.
+
+        Raises:
+            400 error if input validation fails.
+            500 error if there is an unexpected issue during the update.
+        """
+        try:
+            data = request.json
+            if not data or 'amount' not in data:
+                return make_response(jsonify({'error': 'Missing some of the required field: amount'}), 400)
+
+            amount = float(data['amount']) # cast to float
+
+            app.logger.info("Updating cash balance by %.2f...", amount)
+            user_profile_model.update_cash_balance(amount)
+            return make_response(jsonify({'status': 'success', 'new_balance': user_profile_model.get_cash_balance()}), 200)
+        except Exception as e:
+            app.logger.error("Failed to update cash balance: %s", str(e))
+            return make_response(jsonify({'error': str(e)}), 500)
+
+
+    @app.route('/api/clear-portfolio', methods=['POST'])
+    def clear_portfolio() -> Response:
+        """
+        Route to clear all stocks and reset cash balance.
+
+        Returns:
+            JSON response indicating success.
+
+        Raises:
+            500 error if there is an unexpected issue during the operation.
+        """
+        try:
+            app.logger.info("Clearing portfolio...")
+            user_profile_model.clear_all_stock_and_balance()
+            return make_response(jsonify({'status': 'success', 'message': 'Portfolio cleared.'}), 200)
+        except Exception as e:
+            app.logger.error("Failed to clear portfolio: %s", str(e))
+            return make_response(jsonify({'error': str(e)}), 500)
+
+
+    ##########################################################
+    # Stock Trading
+    ##########################################################
+
+    @app.route('/api/buy-stock', methods=['POST'])
+    def buy_stock() -> Response:
+        """
+        Route to buy a stock.
+
+        Request Body:
+            - symbol (str): The stock symbol.
+            - quantity (int): The number of shares to buy.
+
+        Returns:
+            JSON response indicating success or failure.
+
+        Raises:
+            400 error if input validation fails.
+            500 error if there is an unexpected issue during the update.
+        """
+        try:
+            data = request.json
+            if not data or 'symbol' not in data or 'quantity' not in data:
+                return make_response(jsonify({'error': 'Missing some of the required fields: symbol, quantity'}), 400)
+
+            symbol = data['symbol']
+            quantity = int(data['quantity']) # cast to int
+
+            app.logger.info("Buying %d shares of %s...", quantity, symbol)
+            user_profile_model.buy_stock(symbol, quantity)
+            return make_response(jsonify({'status': 'success', 'message': f"Bought {quantity} shares of {symbol}."}), 200)
+        except Exception as e:
+            app.logger.error("Failed to buy stock: %s", str(e))
+            return make_response(jsonify({'error': str(e)}), 500)
+
+
+    @app.route('/api/sell-stock', methods=['POST'])
+    def sell_stock() -> Response:
+        """
+        Route to sell a stock.
+
+        Request Body:
+            - symbol (str): The stock symbol.
+            - quantity (int): The number of shares to sell.
+
+        Returns:
+            JSON response indicating success or failure.
+
+        Raises:
+            400 error if input validation fails.
+            500 error if there is an unexpected issue during the update.
+        """
+        try:
+            data = request.json
+            if not data or 'symbol' not in data or 'quantity' not in data:
+                return make_response(jsonify({'error': 'Missing some of the required fields: symbol, quantity'}), 400)
+
+            symbol = data['symbol']
+            quantity = int(data['quantity']) # cast to int
+
+            app.logger.info("Selling %d shares of %s...", quantity, symbol)
+            user_profile_model.sell_stock(symbol, quantity)
+            return make_response(jsonify({'status': 'success', 'message': f"Sold {quantity} shares of {symbol}."}), 200)
+        except Exception as e:
+            app.logger.error("Failed to sell stock: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
     
     # Routes end here.
