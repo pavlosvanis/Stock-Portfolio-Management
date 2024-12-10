@@ -1,12 +1,7 @@
-
 import logging
 from typing import Dict, Tuple
-import sqlite3
-from stock_management.utils.logger import configure_logger
-from stock_management.utils.sql_utils import get_db_connection
 
 logger = logging.getLogger(__name__)
-configure_logger(logger)
 
 
 class UserProfile:
@@ -14,278 +9,139 @@ class UserProfile:
     A class to manage a user's profile, including cash balance, stock holdings,
     and their liked stock list.
     """
-   
-    def __init__(self, cash_balance=0):
+
+    def __init__(self, user_id: int, username: str, cash_balance: float = 0.0):
         """
         Initializes the UserProfile with the given user details, an empty stock holding,
         and an empty liked stock list.
+
+        Args:
+            user_id (int): The user's unique ID.
+            username (str): The username of the user.
+            cash_balance (float): The initial cash balance of the user.
         """
-        self.cash_balance = cash_balance
-
-        if self.cash_balance < 0:
+        if cash_balance < 0:
             raise ValueError("Cash balance must be non-negative")
-
-        self.user_id = 0
-        self.username = ""
-
+        
+        self.user_id = user_id
+        self.username = username
+        self.cash_balance = cash_balance
         # Dict[<symbol>, (<quantity>, <bought_price>)]
-        self.current_stock_holding: Dict[str, Tuple[int, float]] = {} 
-    
+        self.current_stock_holding: Dict[str, Tuple[int, float]] = {}
+
     def get_holding_stocks(self) -> Dict[str, Tuple[int, float]]:
+        """Returns the user's current stock holdings."""
         return self.current_stock_holding
-    
+
     def get_cash_balance(self) -> float:
+        """Returns the user's current cash balance."""
         return self.cash_balance
 
-    def get_portfolio(user_id: int):
-        """
-        Retrieves the user's current stock portfolio.
-
-        Args:
-            user_id (int): The ID of the user whose portfolio is being retrieved.
-
-        Returns:
-            Dict[str, int]: A dictionary containing stock symbols and the quantities
-            that the user holds for each stock.
-         """
-        try:
-        # Assuming you have a function get_db_connection() that returns a database connection
-         with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT stock_symbol, quantity 
-                    FROM portfolio 
-                    WHERE user_id = ? AND deleted = 0
-                """, (user_id,))
-            
-                rows = cursor.fetchall()
-            
-                if not rows:
-                    logger.info("No portfolio found for user ID %s", user_id)
-                    return {}
-            
-                portfolio = {row[0]: row[1] for row in rows}
-                logger.info("Retrieved portfolio for user ID %s: %s", user_id, portfolio)
-                return portfolio
-
-        except sqlite3.Error as e:
-            logger.error("Database error: %s", str(e))
-            raise e
-
-    def add_stock_to_portfolio(self, stock: dict) -> None:
+    def add_stock_to_portfolio(self, symbol: str, quantity: int, bought_price: float) -> None:
         """
         Adds a stock to the user's holdings or updates the quantity if it already exists.
-        This method is used when the user buys a new stock.
 
         Args:
-            stock (dict): a dictionary that contains the symbol and quantity of a stock.
+            symbol (str): The stock's ticker symbol.
+            quantity (int): The number of shares to add.
+            bought_price (float): The price at which the stock was purchased.
         """
+        if quantity < 1 or bought_price < 0:
+            raise ValueError("Quantity must be positive, and price must be non-negative.")
 
-        if stock["symbol"] in self.current_stock_holding:
-            stock_existed = stock["symbol"]
-            stock_existed_quantity = self.current_stock_holding[stock["symbol"]]
-            logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_quantity)
+        if symbol in self.current_stock_holding:
+            current_quantity, average_price = self.current_stock_holding[symbol]
+            total_quantity = current_quantity + quantity
+            # Calculate weighted average price
+            new_average_price = ((current_quantity * average_price) + (quantity * bought_price)) / total_quantity
+            self.current_stock_holding[symbol] = (total_quantity, new_average_price)
         else:
-            self.current_stock_holding[stock["symbol"]] = stock["quantity"]
-            logger.info("Added new stock: %s with quantity %d.", stock["symbol"], stock["quantity"])
+            self.current_stock_holding[symbol] = (quantity, bought_price)
 
-
-    def get_today_earnings_to_holding(self) -> float:
-        """
-        Calculates today's earnings from the user's stock holdings.
-
-        The earnings are simply computed based on the total stock price difference 
-        between yesterday's and today's cumulative prices in the user's holdings.
-
-        Returns:
-            float: The total earnings from today's stock price changes.
-
-        Raises:
-            Exception: If there is an issue retrieving stock prices or calculating earnings.
-        """
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Get all holdings
-                cursor.execute("SELECT stock_symbol, quantity FROM portfolio WHERE user_id = ? AND deleted = 0", (self.user_id,))
-                holdings = cursor.fetchall()
-            
-                total_earnings = 0.0
-
-                for symbol, quantity in holdings:
-                    # Get today's and yesterday's stock prices
-                    today_price = self.get_stock_price(symbol, "today")
-                    yesterday_price = self.get_stock_price(symbol, "yesterday")
-
-                    # Calculate earnings
-                    total_earnings += (today_price - yesterday_price) * quantity
-
-                return total_earnings
-
-        except Exception as e:
-            logger.error("Error calculating today's earnings: %s", str(e))
-            raise e
-    
+        logger.info("Added or updated stock %s: %d shares at an average price of %.2f.", symbol, quantity, bought_price)
 
     def remove_stock_from_holding(self, symbol: str, quantity: int) -> None:
         """
         Removes or reduces the quantity of a stock in the user's holdings.
-        This method is used when the user sells of the stock in the holdings.
 
         Args:
             symbol (str): The stock's ticker symbol.
             quantity (int): The number of shares to remove.
         """
-        try:
-            if quantity < 1:
-                raise ValueError("Quantity must be greater than 0.")
+        if symbol not in self.current_stock_holding:
+            raise ValueError(f"Stock {symbol} does not exist in holdings.")
+        if quantity < 1:
+            raise ValueError("Quantity must be greater than 0.")
 
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Check if the stock exists
-                cursor.execute("SELECT quantity FROM portfolio WHERE user_id = ? AND stock_symbol = ? AND deleted = 0", (self.user_id, symbol))
-                row = cursor.fetchone()
+        current_quantity, bought_price = self.current_stock_holding[symbol]
+        if quantity > current_quantity:
+            raise ValueError(f"Cannot remove {quantity} shares. Only {current_quantity} shares available.")
 
-                if not row:
-                    raise ValueError(f"Stock {symbol} does not exist in holdings.")
-            
-                current_quantity = row[0]
+        if quantity == current_quantity:
+            del self.current_stock_holding[symbol]
+        else:
+            self.current_stock_holding[symbol] = (current_quantity - quantity, bought_price)
 
-                if quantity > current_quantity:
-                    raise ValueError(f"Cannot remove {quantity} shares. Only {current_quantity} shares available.")
-
-                if quantity == current_quantity:
-                    # Remove the stock completely
-                    cursor.execute("UPDATE portfolio SET deleted = 1 WHERE user_id = ? AND stock_symbol = ?", (self.user_id, symbol))
-                else:
-                    # Reduce the quantity
-                    cursor.execute("UPDATE portfolio SET quantity = quantity - ? WHERE user_id = ? AND stock_symbol = ?", (quantity, self.user_id, symbol))
-
-                conn.commit()
-
-        except Exception as e:
-            logger.error("Error removing stock: %s", str(e))
-            raise e
+        logger.info("Removed %d shares of stock %s.", quantity, symbol)
 
     def update_cash_balance(self, amount: float) -> None:
         """
         Updates the user's cash balance by adding or subtracting the given amount.
-        Corresponds to the situation when the user retrieves and add money into the
-        account.
 
         Args:
             amount (float): The amount to add or subtract from the balance.
         """
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Update the cash balance
-                cursor.execute("UPDATE users SET cash_balance = cash_balance + ? WHERE id = ?", (amount, self.user_id))
-                conn.commit()
+        if self.cash_balance + amount < 0:
+            raise ValueError("Insufficient funds.")
+        self.cash_balance += amount
+        logger.info("Cash balance updated by %.2f. New balance: %.2f.", amount, self.cash_balance)
 
-        except Exception as e:
-            logger.error("Error updating cash balance: %s", str(e))
-            raise e
-
-    def buy_stock(self, symbol: str, quantity: int) -> None:
+    def buy_stock(self, symbol: str, quantity: int, stock_price: float) -> None:
         """
         Allows the user to buy shares of a stock.
-
-        Updates the user's portfolio by adding the specified quantity of the stock
-        and deducts the total cost (price × quantity) from the user's cash balance.
 
         Args:
             symbol (str): The stock's ticker symbol.
             quantity (int): The number of shares to purchase.
+            stock_price (float): The price per share of the stock.
 
         Raises:
-            ValueError: If the quantity is less than 1, the stock symbol is invalid, or
+            ValueError: If the quantity is less than 1, stock price is invalid, or
                         the user has insufficient funds.
-            Exception: If there is an issue retrieving stock prices or updating the portfolio.
         """
-        try:
-            if quantity < 1:
-                raise ValueError("Quantity must be at least 1.")
+        if quantity < 1 or stock_price <= 0:
+            raise ValueError("Quantity must be at least 1, and stock price must be positive.")
+        total_cost = quantity * stock_price
+        if total_cost > self.cash_balance:
+            raise ValueError("Insufficient funds to buy the stock.")
+        
+        self.update_cash_balance(-total_cost)
+        self.add_stock_to_portfolio(symbol, quantity, stock_price)
+        logger.info("Bought %d shares of %s at %.2f each.", quantity, symbol, stock_price)
 
-            # Get stock price
-            stock_price = self.get_stock_price(symbol)
-
-            # Calculate total cost
-            total_cost = stock_price * quantity
-
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Check user cash balance
-                cursor.execute("SELECT cash_balance FROM users WHERE id = ?", (self.user_id,))
-                row = cursor.fetchone()
-
-                if not row or row[0] < total_cost:
-                    raise ValueError("Insufficient funds to buy the stock.")
-
-                # Deduct from cash balance
-                cursor.execute("UPDATE users SET cash_balance = cash_balance - ? WHERE id = ?", (total_cost, self.user_id))
-
-                # Add stock to portfolio
-                self.add_stock_to_portfolio(self.user_id, symbol, quantity)
-
-                conn.commit()
-
-        except Exception as e:
-            logger.error("Error buying stock: %s", str(e))
-            raise e
-
-
-    def sell_stock(self, symbol: str, quantity: int) -> None:
+    def sell_stock(self, symbol: str, quantity: int, stock_price: float) -> None:
         """
         Allows the user to sell shares of a stock.
-
-        Updates the user's portfolio by reducing the specified quantity of the stock
-        and adds the total revenue (price × quantity) to the user's cash balance.
 
         Args:
             symbol (str): The stock's ticker symbol.
             quantity (int): The number of shares to sell.
+            stock_price (float): The price per share of the stock.
 
         Raises:
-            ValueError: If the quantity is less than 1, the stock symbol is invalid, or
+            ValueError: If the quantity is less than 1, stock price is invalid, or
                         the user does not hold enough shares of the stock.
-            Exception: If there is an issue retrieving stock prices or updating the portfolio.
         """
-        try:
-            if quantity < 1:
-                raise ValueError("Quantity must be at least 1.")
-
-            # Get stock price
-            stock_price = self.get_stock_price(symbol)
-
-            # Calculate total revenue
-            total_revenue = stock_price * quantity
-
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Check if the stock exists
-                cursor.execute("SELECT quantity FROM portfolio WHERE user_id = ? AND stock_symbol = ? AND deleted = 0", (self.user_id, symbol))
-                row = cursor.fetchone()
-
-                if not row or row[0] < quantity:
-                    raise ValueError("Not enough shares to sell.")
-
-                # Reduce stock quantity
-                self.remove_stock_from_holding(symbol, quantity)
-
-                # Add to cash balance
-                cursor.execute("UPDATE users SET cash_balance = cash_balance + ? WHERE id = ?", (total_revenue, self.user_id))
-
-                conn.commit()
-
-        except Exception as e:
-            logger.error("Error selling stock: %s", str(e))
-            raise e
+        if quantity < 1 or stock_price <= 0:
+            raise ValueError("Quantity must be at least 1, and stock price must be positive.")
+        
+        self.remove_stock_from_holding(symbol, quantity)
+        total_revenue = quantity * stock_price
+        self.update_cash_balance(total_revenue)
+        logger.info("Sold %d shares of %s at %.2f each.", quantity, symbol, stock_price)
 
     def clear_all_stock_and_balance(self) -> None:
-        """
-        Clear all stocks and set balance to 0.0
-        """
+        """Clear all stocks and set balance to 0.0."""
         self.current_stock_holding = {}
         self.cash_balance = 0.0
-        logger.info("Current stock holding cleared and balance set to 0.")
+        logger.info("All stock holdings cleared, and balance set to 0.")
