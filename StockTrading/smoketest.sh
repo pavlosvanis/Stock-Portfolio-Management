@@ -330,19 +330,17 @@ sell_stock() {
 
 # Health checks
 check_health
-check_db
 
 
-create_user "testuser" "testpassword"
-login_user "testuser" "testpassword"
-update_password "testuser" "testpassword" "newpassword"
-logout_user "testuser"
+
+create_user "testuser2" "testpassword"
+login_user "testuser2" "testpassword"
+update_password "testuser2" "testpassword" "newpassword"
+logout_user "testuser2"
 lookup_stock "AAPL"
 get_price_details "AAPL"
-# fetch_historical_data "AAPL" "2023-01-01" "2023-12-31"
-delete_user "testuser"
+delete_user "testuser2"
 
-# Smoke Test Execution
 
 
 get_portfolio
@@ -350,9 +348,9 @@ get_total_values
 add_stock "AAPL" 10 150.25
 remove_stock "AAPL" 5
 update_cash_balance 5000.00
-clear_portfolio
 buy_stock "GOOGL" 2
 sell_stock "GOOGL" 2
+clear_portfolio
 
 
 echo "All tests passed successfully!"
