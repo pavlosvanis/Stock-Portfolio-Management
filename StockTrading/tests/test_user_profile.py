@@ -42,6 +42,23 @@ def mock_lookup_stock(mocker):
 ##########################################################
 # Portfolio Management
 ##########################################################
+def test_get_holding_stocks(mock_user):
+    """
+    Test the get_holding_stocks method
+    """
+    expected_holdings = { "NVDA": (10, 150.0) }
+
+    holdings = mock_user.get_holding_stocks()
+    assert holdings == expected_holdings
+
+
+def test_get_cash_balance(mock_user):
+    """
+    Test the get_cash_balance method
+    """
+    expected_balance = 1000.0
+    balance = mock_user.get_cash_balance()
+    assert balance == expected_balance
 
 def test_get_portfolio(mock_user, mock_get_price_details, mock_lookup_stock):
     """
