@@ -27,7 +27,9 @@ class UserProfile:
 
         self.user_id = 0
         self.username = ""
-        self.current_stock_holding: Dict[str, int] = {}
+
+        # Dict[<symbol>, (<quantity>, <bought_price>)]
+        self.current_stock_holding: Dict[str, (int, float)] = {} 
 
     def get_portfolio(user_id: int) -> Dict[str, int]:
         """
