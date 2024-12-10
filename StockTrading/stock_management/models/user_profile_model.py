@@ -190,11 +190,11 @@ class UserProfile:
                 current_quantity, average_price = self.current_stock_holding[symbol]
                 new_quantity = current_quantity + quantity
                 new_average_price = ((current_quantity * average_price) + (quantity * stock_price)) / new_quantity
+                print(current_quantity, new_quantity)
                 self.current_stock_holding[symbol] = (new_quantity, new_average_price)
             else:
                 self.current_stock_holding[symbol] = (quantity, stock_price)
             
-            self.add_stock_to_portfolio(symbol, quantity, stock_price)
             logger.info("Bought %d shares of %s at the price of %.2f. Total cost: %.2f.", quantity, symbol, stock_price, total_cost)
 
         except ValueError as vale:
