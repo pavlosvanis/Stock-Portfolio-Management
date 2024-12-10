@@ -309,7 +309,156 @@ Fetches historical price data for a stock within a specified date range. The dat
    }
    ```
 
-  ### More routes description for user_profile_model:
+### Get Portfolio
+
+**Route**: /api/get-portfolio  
+**Request Type**: GET  
+**Purpose**: Retrieves the user's stock portfolio, including details about all held stocks.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: 
+    { "status": "Get portfolio successful", 
+      "portfolio": { "AAPL": { "quantity": 10, 
+                               "average_purchase_price": 150.0, 
+                               "current_market_price": 200.0, 
+                               "P/E Ratio": "15.0", 
+                               "52 Week High": "250.0", 
+                               "52 Week Low": "100.0", 
+                               "Company Description": "Apple Inc.", 
+                               "Exchange": "NASDAQ", 
+                               "Name": "Apple"} } }  
+**Example Request**:  
+GET /api/get-portfolio  
+**Example Response**:  
+  { "status": "Get portfolio successful", 
+              "portfolio": { "AAPL": { "quantity": 10, "average_purchase_price": 150.0, 
+                                       "current_market_price": 200.0, 
+                                       "P/E Ratio": "15.0", 
+                                       "52 Week High": "250.0", 
+                                       "52 Week Low": "100.0", 
+                                       "Company Description": "Apple Inc.", 
+                                       "Exchange": "NASDAQ", 
+                                       "Name": "Apple" } } }  
+
+### Get Total Values
+
+**Route**: /api/get-total-values  
+**Request Type**: GET  
+**Purpose**: Retrieves the total value of the user's stock portfolio, including total stock value, cash balance, and overall value.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", 
+               "total_values": { "total_stock_value": 2000.0, 
+                                 "cash_balance": 1000.0, 
+                                 "total_portfolio_value": 3000.0 } }  
+**Example Request**:  
+GET /api/get-total-values  
+**Example Response**:  
+  { "status": "success", 
+    "total_values": { "total_stock_value": 2000.0, 
+                      "cash_balance": 1000.0, 
+                      "total_portfolio_value": 3000.0 } }  
+
+### Add Stock
+
+**Route**: /api/add-stock  
+**Request Type**: POST  
+**Purpose**: Adds stock to the user's portfolio.  
+**Request Body**:  
+  - symbol (String): The stock symbol.  
+  - quantity (Integer): The number of shares to add.  
+  - bought_price (Float): The price at which the shares were purchased.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "message": "10 shares of AAPL added." }  
+**Example Request**:  
+{ "symbol": "AAPL", "quantity": 10, "bought_price": 150.0 }  
+**Example Response**:  
+{ "status": "success", "message": "10 shares of AAPL added." }  
+
+### Remove Stock
+
+**Route**: /api/remove-stock  
+**Request Type**: POST  
+**Purpose**: Removes stock from the user's portfolio.  
+**Request Body**:  
+  - symbol (String): The stock symbol.  
+  - quantity (Integer): The number of shares to remove.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "message": "Removed 5 shares of AAPL." }  
+**Example Request**:  
+{ "symbol": "AAPL", "quantity": 5 }  
+**Example Response**:  
+{ "status": "success", "message": "Removed 5 shares of AAPL." }  
+
+### Update Cash
+
+**Route**: /api/update-cash  
+**Request Type**: POST  
+**Purpose**: Updates the user's cash balance by adding or subtracting a specified amount.  
+**Request Body**:  
+  - amount (Float): The amount to adjust the cash balance.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "new_balance": 1200.0 }  
+**Example Request**:  
+{ "amount": 200.0 }  
+**Example Response**:  
+{ "status": "success", "new_balance": 1200.0 }  
+
+### Clear Portfolio
+
+**Route**: /api/clear-portfolio  
+**Request Type**: POST  
+**Purpose**: Clears all stocks from the user's portfolio and resets the cash balance.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "message": "Portfolio cleared." }  
+**Example Request**:  
+POST /api/clear-portfolio  
+**Example Response**:  
+{ "status": "success", "message": "Portfolio cleared." }  
+
+### Buy Stock
+
+**Route**: /api/buy-stock  
+**Request Type**: POST  
+**Purpose**: Buys a stock and adds it to the user's portfolio.  
+**Request Body**:  
+  - symbol (String): The stock symbol.  
+  - quantity (Integer): The number of shares to buy.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "message": "Bought 10 shares of AAPL." }  
+**Example Request**:  
+{ "symbol": "AAPL", "quantity": 10 }  
+**Example Response**:  
+{ "status": "success", "message": "Bought 10 shares of AAPL." }  
+
+### Sell Stock
+
+**Route**: /api/sell-stock  
+**Request Type**: POST  
+**Purpose**: Sells stock from the user's portfolio.  
+**Request Body**:  
+  - symbol (String): The stock symbol.  
+  - quantity (Integer): The number of shares to sell.  
+**Response Format**: JSON  
+**Success Response Example**:  
+  - Code: 200  
+  - Content: { "status": "success", "message": "Sold 5 shares of AAPL." }  
+**Example Request**:  
+{ "symbol": "AAPL", "quantity": 5 }  
+**Example Response**:  
+{ "status": "success", "message": "Sold 5 shares of AAPL." }  
 
     
 
