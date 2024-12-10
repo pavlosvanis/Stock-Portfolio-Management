@@ -30,8 +30,11 @@ class UserProfile:
 
         # Dict[<symbol>, (<quantity>, <bought_price>)]
         self.current_stock_holding: Dict[str, (int, float)] = {} 
+    
+    def get_holding_stocks(self) -> Dict[str, (int, float)]:
+        return self.current_stock_holding
 
-    def get_portfolio(user_id: int) -> Dict[str, int]:
+    def get_portfolio(user_id: int):
         """
         Retrieves the user's current stock portfolio.
 
