@@ -4,9 +4,11 @@ import os
 from stock_management.utils.logger import configure_logger
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 configure_logger(logger)
+load_dotenv()
 
 # todo: replace 'change_to_your_key' with your actual API KEY
 api_key = os.getenv("API_KEY")
