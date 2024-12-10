@@ -256,6 +256,12 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error('Unexpected error during password update: %s', str(e))
             return make_response(jsonify({'error': 'An unexpected error occurred'}), 500)
+    
+    ##########################################################
+    #
+    # Stock infos
+    #
+    ##########################################################
 
     @app.route('/api/lookup-stock/<string:symbol>', methods=['GET'])
     def lookup_stock_route(symbol: str) -> Response:
@@ -325,175 +331,10 @@ def create_app(config_class=ProductionConfig):
 
     ##########################################################
     #
-    # Meals
+    # User Profile Operations
     #
     ##########################################################
 
-    @app.route('/api/create-meal', methods=['POST'])
-    def add_meal() -> Response:
-        """
-        Route to add a new meal to the database.
-
-        Expected JSON Input:
-            - meal (str): The name of the combatant (meal).
-            - cuisine (str): The cuisine type of the combatant (e.g., Italian, Chinese).
-            - price (float): The price of the combatant.
-            - difficulty (str): The preparation difficulty (HIGH, MED, LOW).
-
-        Returns:
-            JSON response indicating the success of the combatant addition.
-        Raises:
-            400 error if input validation fails.
-            500 error if there is an issue adding the combatant to the database.
-        """
-        app.logger.info('Creating new meal')
-        try:
-            # Get the JSON data from the request
-            data = request.get_json()
-
-            # Extract and validate required fields
-            meal = data.get('meal')
-            cuisine = data.get('cuisine')
-            price = data.get('price')
-            difficulty = data.get('difficulty')
-
-            if not meal or not cuisine or price is None or difficulty not in ['HIGH', 'MED', 'LOW']:
-                raise BadRequest("Invalid input. All fields are required with valid values.")
-
-            # Check that price is a float and has at most two decimal places
-            try:
-                price = float(price)
-                if round(price, 2) != price:
-                    raise ValueError("Price has more than two decimal places")
-            except ValueError as e:
-                return make_response(jsonify({'error': 'Price must be a valid float with at most two decimal places'}),
-                                     400)
-
-            # Call the Meals function to add the combatant to the database
-            app.logger.info('Adding meal: %s, %s, %.2f, %s', meal, cuisine, price, difficulty)
-            Meals.create_meal(meal, cuisine, price, difficulty)
-
-            app.logger.info("Combatant added: %s", meal)
-            return make_response(jsonify({'status': 'combatant added', 'combatant': meal}), 201)
-        except Exception as e:
-            app.logger.error("Failed to add combatant: %s", str(e))
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    @app.route('/api/delete-meal/<int:meal_id>', methods=['DELETE'])
-    def delete_meal(meal_id: int) -> Response:
-        """
-        Route to delete a meal by its ID. This performs a soft delete by marking it as deleted.
-
-        Path Parameter:
-            - meal_id (int): The ID of the meal to delete.
-
-        Returns:
-            JSON response indicating success of the operation or error message.
-        """
-        try:
-            app.logger.info(f"Deleting meal by ID: {meal_id}")
-
-            Meals.delete_meal(meal_id)
-            return make_response(jsonify({'status': 'meal deleted'}), 200)
-        except Exception as e:
-            app.logger.error(f"Error deleting meal: {e}")
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    @app.route('/api/get-meal-by-id/<int:meal_id>', methods=['GET'])
-    def get_meal_by_id(meal_id: int) -> Response:
-        """
-        Route to get a meal by its ID.
-
-        Path Parameter:
-            - meal_id (int): The ID of the meal.
-
-        Returns:
-            JSON response with the meal details or error message.
-        """
-        try:
-            app.logger.info(f"Retrieving meal by ID: {meal_id}")
-
-            meal = Meals.get_meal_by_id(meal_id)
-            return make_response(jsonify({'status': 'success', 'meal': meal}), 200)
-        except Exception as e:
-            app.logger.error(f"Error retrieving meal by ID: {e}")
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    @app.route('/api/get-meal-by-name/<string:meal_name>', methods=['GET'])
-    def get_meal_by_name(meal_name: str) -> Response:
-        """
-        Route to get a meal by its name.
-
-        Path Parameter:
-            - meal_name (str): The name of the meal.
-
-        Returns:
-            JSON response with the meal details or error message.
-        """
-        try:
-            app.logger.info(f"Retrieving meal by name: {meal_name}")
-
-            if not meal_name:
-                return make_response(jsonify({'error': 'Meal name is required'}), 400)
-
-            meal = Meals.get_meal_by_name(meal_name)
-            return make_response(jsonify({'status': 'success', 'meal': meal}), 200)
-        except Exception as e:
-            app.logger.error(f"Error retrieving meal by name: {e}")
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    @app.route('/api/init-db', methods=['POST'])
-    def init_db():
-        """
-        Initialize or recreate database tables.
-
-        This route initializes the database tables defined in the SQLAlchemy models.
-        If the tables already exist, they are dropped and recreated to ensure a clean
-        slate. Use this with caution as all existing data will be deleted.
-
-        Returns:
-            Response: A JSON response indicating the success or failure of the operation.
-
-        Logs:
-            Logs the status of the database initialization process.
-        """
-        try:
-            with app.app_context():
-                app.logger.info("Dropping all existing tables.")
-                db.drop_all()  # Drop all existing tables
-                app.logger.info("Creating all tables from models.")
-                db.create_all()  # Recreate all tables
-            app.logger.info("Database initialized successfully.")
-            return jsonify({"status": "success", "message": "Database initialized successfully."}), 200
-        except Exception as e:
-            app.logger.error("Failed to initialize database: %s", str(e))
-            return jsonify({"status": "error", "message": "Failed to initialize database."}), 500
-
-    ############################################################
-    #
-    # Battle
-    #
-    ############################################################
-
-    @app.route('/api/battle', methods=['GET'])
-    def battle() -> Response:
-        """
-        Route to initiate a battle between the two currently prepared meals.
-
-        Returns:
-            JSON response indicating the result of the battle and the winner.
-        Raises:
-            500 error if there is an issue during the battle.
-        """
-        try:
-            app.logger.info('Two meals enter, one meal leaves!')
-
-            winner = battle_model.battle()
-
-            return make_response(jsonify({'status': 'battle complete', 'winner': winner}), 200)
-        except Exception as e:
-            app.logger.error(f"Battle error: {e}")
-            return make_response(jsonify({'error': str(e)}), 500)
 
     @app.route('/api/clear-combatants', methods=['POST'])
     def clear_combatants() -> Response:
@@ -565,37 +406,8 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             app.logger.error("Failed to prepare combatants: %s", str(e))
             return make_response(jsonify({'error': str(e)}), 500)
-
-    ############################################################
-    #
-    # Leaderboard
-    #
-    ############################################################
-
-    @app.route('/api/leaderboard', methods=['GET'])
-    def get_leaderboard() -> Response:
-        """
-        Route to get the leaderboard of meals sorted by wins, battles, or win percentage.
-
-        Query Parameters:
-            - sort (str): The field to sort by ('wins', 'battles', or 'win_pct'). Default is 'wins'.
-
-        Returns:
-            JSON response with a sorted leaderboard of meals.
-        Raises:
-            500 error if there is an issue generating the leaderboard.
-        """
-        try:
-            sort_by = request.args.get('sort', 'wins')  # Default sort by wins
-            app.logger.info("Generating leaderboard sorted by %s", sort_by)
-
-            leaderboard_data = Meals.get_leaderboard(sort_by)
-
-            return make_response(jsonify({'status': 'success', 'leaderboard': leaderboard_data}), 200)
-        except Exception as e:
-            app.logger.error(f"Error generating leaderboard: {e}")
-            return make_response(jsonify({'error': str(e)}), 500)
-
+    
+    # Routes end here.
     return app
 
 
