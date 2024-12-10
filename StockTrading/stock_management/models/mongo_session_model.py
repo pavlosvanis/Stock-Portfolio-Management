@@ -30,12 +30,16 @@ def login_user(user_id: int, user_profile_model) -> None:
 
     if session:
         logger.info("Session found for user ID %d. Loading stocks into UserProfile.", user_id)
-        user_profile_model.clear_all_stock()
+        user_profile_model.add_stock_to_portfolio()
 
         stocks = session.get("current_stock_holding", {})
-        for symbol, quantity in stocks.items():
+
+        for symbol, quantity_price in stocks.items():
+            quantity, price = quantity_price
             logger.debug("Loading stock: %s, quantity: %d", symbol, quantity)
-            user_profile_model.add_stock_to_holding(symbol, quantity)
+            stock = {}
+            stock[symbol] = (quantity, price)
+            user_profile_model.add_stock_to_portfolio(stock)
 
         user_profile_model.update_cash_balance(session.get("cash_balance", 0.0))
         logger.info("Stock holdings and cash balance successfully loaded for user ID %d.", user_id)
@@ -65,8 +69,12 @@ def logout_user(user_id: int, user_profile_model) -> None:
         ValueError: If no session document is found for the user in MongoDB.
     """
     logger.info("Attempting to log out user with ID %d.", user_id)
-    stocks = user_profile_model.get_portfolio()
-    cash_balance = user_profile_model.cash_balance
+    stocks = user_profile_model.get_holding_stocks()
+
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    print(stocks)
+
+    cash_balance = user_profile_model.get_cash_balance()
 
     logger.debug("Current stock holdings for user ID %d: %s", user_id, stocks)
     logger.debug("Current cash balance for user ID %d: %f", user_id, cash_balance)
@@ -82,5 +90,5 @@ def logout_user(user_id: int, user_profile_model) -> None:
         raise ValueError(f"User with ID {user_id} not found for logout.")
 
     logger.info("Stocks successfully saved for user ID %d. Clearing UserProfile stocks.", user_id)
-    user_profile_model.clear_all_stock()
+    user_profile_model.clear_all_stock_and_balance()
     logger.info("UserProfile stocks cleared for user ID %d.", user_id)
