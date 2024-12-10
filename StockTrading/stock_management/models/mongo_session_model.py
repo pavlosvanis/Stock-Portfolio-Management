@@ -71,9 +71,6 @@ def logout_user(user_id: int, user_profile_model) -> None:
     logger.info("Attempting to log out user with ID %d.", user_id)
     stocks = user_profile_model.get_holding_stocks()
 
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
-    print(stocks)
-
     cash_balance = user_profile_model.get_cash_balance()
 
     logger.debug("Current stock holdings for user ID %d: %s", user_id, stocks)
