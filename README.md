@@ -16,11 +16,21 @@ The Stock Management app allows users to create accounts, securely log in, and m
 
   Run the docker-compose.yml file given with steps:
   * docker-compose build    <- This should build the container
-  * docker-compose up -d       <- This should run the container (remove "-d" if you want the log to be in the terminal)
+  * docker-compose up -d    <- This should run the container (remove "-d" if you want the log to be in the terminal)
   After that, you are able to access the application via: http://localhost:5000
 
   To close and delete the container:
   * docker-compose down
+
+- Steps to run the unit tests (pytests):
+  Same as what we did in HW 3, setup the virtual environment:
+  * source setup_venv.sh    <- You might need to change the permission of this file using: chmod +x setup_venv.sh
+
+  After the packages are downloaded, use the following command to activate the venv:
+  (You can use other command to activate the venv, this is what we used)
+  * source stock_management_venv/bin/activate 
+  
+  Now you can run the pytests.
 
 - Variables in .env:
   * API_KEY: The api key for AlphaVantage that will be used. You should replace it in .env with your own.
