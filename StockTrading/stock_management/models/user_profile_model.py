@@ -33,6 +33,9 @@ class UserProfile:
     
     def get_holding_stocks(self) -> Dict[str, (int, float)]:
         return self.current_stock_holding
+    
+    def get_cash_balance(self) -> float:
+        return self.cash_balance
 
     def get_portfolio(user_id: int):
         """
