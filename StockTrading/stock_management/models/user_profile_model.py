@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 from stock_management.models.stock_model import get_price_details, lookup_stock
 
 logger = logging.getLogger(__name__)
