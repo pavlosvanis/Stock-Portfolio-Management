@@ -86,7 +86,7 @@ class UserProfile:
             stock_existed_quantity = self.current_stock_holding[stock["symbol"]]
             logger.info( "Updated stock: %s. New quantity: %d.", stock_existed, stock_existed_quantity)
         else:
-            self.current_stock_holding[stock["symbol"]] = stock["qunatity"]
+            self.current_stock_holding[stock["symbol"]] = stock["quantity"]
             logger.info("Added new stock: %s with quantity %d.", stock["symbol"], stock["quantity"])
 
 
