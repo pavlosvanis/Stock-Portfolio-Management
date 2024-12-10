@@ -8,7 +8,6 @@ from stock_management.models import stock_model
 from stock_management.models.user_profile_model import UserProfile
 from stock_management.models.users_management_model import Users
 from stock_management.models.mongo_session_model import login_user, logout_user
-from stock_management.utils.sql_utils import check_database_connection, check_table_exists
 
 from stock_management.models.stock_model import (
     lookup_stock,
