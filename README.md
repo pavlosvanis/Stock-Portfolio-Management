@@ -38,7 +38,7 @@ The Stock Management app allows users to create accounts, securely log in, and m
 - Variables in docker-compose.yml:
   * DATABASE_URL=sqlite:////app/db/app.db: the path to the SQLite database file within the docker container.
   * MONGO_HOST=mongod: Sets the hostname for the MongoDB service.
-  * MONGO_PORT=27017: Defines the port number for connecting to the MongoDB 
+  * MONGO_PORT=27017: Defines the port number for connecting to the MongoDB
 
 ## Routes Description:
 
@@ -248,6 +248,10 @@ Retrieves the latest market price details for a specific stock using its ticker 
    ```
 
 ### Fetch Historical Data
+
+**Important**:
+
+For this route, it requires subscibing the premium plan. We implemented and tested it using premium subscription.
 
 **Description**:
 
