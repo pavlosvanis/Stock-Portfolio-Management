@@ -9,7 +9,7 @@ The Stock Management app allows users to create accounts, securely log in, and m
 ## Requirements / Steps to run the application
 
 - AlphaVantage API key: 
-  You should replace the api_key variable: API_KEY in .env file with your real api key:
+  You should replace the api_key variable: API_KEY in .env file with your real api key (normal API is sufficient, but premium API key might be needed for fetch_historical_detail. See the detail description at that section):
   API_KEY=your_actual_api_key_here
 
 - Steps to run the application:
@@ -251,7 +251,9 @@ Retrieves the latest market price details for a specific stock using its ticker 
 
 **Important**:
 
-For this route, it requires subscibing the premium plan. We implemented and tested it using premium subscription.
+For Fetch Historical Data route, it requires subscibing the premium plan. We implemented and tested it using premium subscription.
+
+We comment this route in smoketest.sh for the sake of convinience (since an error will occur on the test for Fetch Historical Data route due to the subscription level), but if you have a premium subscription API key, you can uncomment it, the test should work as well.
 
 **Description**:
 
