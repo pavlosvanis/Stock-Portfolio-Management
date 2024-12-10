@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
+import os
 from stock_management.utils.logger import configure_logger
-from stock_management.utils.sql_utils import get_db_connection
 import requests
 from datetime import datetime
 
@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 configure_logger(logger)
 
 # todo: replace 'change_to_your_key' with your actual API KEY
-api_key = 'change_to_your_key'
+api_key = os.getenv("API_KEY")
+if not api_key:
+        raise ValueError("Did not get API_KEY, recheck .env to see if you entered your api key for AlphaVantage")
 url = "https://www.alphavantage.co/query"
 
 
