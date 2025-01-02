@@ -1,7 +1,7 @@
-# CS411FinalProject
+# Stock Portfolio Management
 
 ## Overview / Description
-Our final project is a Stock Management app that is designed to manage users' stock trading activities. It integrates functionalities such as user authentication, portfolio management, real-time stock data retrieval through api keys, and 
+Our final project is a Stock Portfolio Management app that is designed to manage users' stock trading activities. It integrates functionalities such as user authentication, portfolio management, real-time stock data retrieval through api keys, and 
 session handling using Python, MongoDB, and SQLAlchemy.
 
 The Stock Management app allows users to create accounts, securely log in, and manage their stock portfolios. Users can buy and sell the stocks while keeping track of real-time stock prices and historical data fetched via the AlphaVantage API. The application also include the functionality of viewing today's earnings with the holded stocks. Also, the app is capable of updating the deposit when the user deposit or withdraw money from the app. The application maintains user sessions using MongoDB, ensuring that stock holdings and account balances are saved and restored seamlessly. Additionally, the app also provides error handling procedures, user authentication, and password management (hashing) to ensure security and reliability. The app uses SQLAlchemy for database interactions and is containerized with Docker for ease of deployment.
